@@ -29,7 +29,9 @@ async function main() {
     },
   });
 
-  console.log(`Seeded admin: ${adminEmail} / ${adminPassword}`);
+  console.log(
+    `Seeded admin: ${adminEmail} (password set from SEED_ADMIN_PASSWORD env var, or the script's built-in default if unset — never printed here)`
+  );
 }
 
 main()
