@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Ensures Netlify's function bundler includes the generated Prisma client/query-engine
+# binaries so netlify/functions/daily-order-check.mts (which imports ../../src/lib/prisma)
+# can actually run in production.
+[functions]
+  included_files = ["node_modules/.prisma/client/**"]
