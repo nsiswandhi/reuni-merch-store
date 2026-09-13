@@ -1,12 +1,116 @@
-export async function sendOrderCreatedEmails(_orderId: string): Promise<void> {
-  // TODO(Task 28/29): send real emails via Resend once that task lands.
-  console.log(`[email stub] would send order-created emails for order ${_orderId}`);
+import { Resend } from "resend";
+import { prisma } from "@/lib/prisma";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_ADDRESS = "Reuni Akbar InVnity <no-reply@invnity-reuni.example>";
+
+function formatRupiah(amount: number): string {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
 }
 
-export async function sendPaymentConfirmedEmails(_orderId: string): Promise<void> {
-  console.log(`[email stub] would send payment-confirmed emails for order ${_orderId}`);
+function orderUrl(token: string): string {
+  const base = process.env.SITE_URL ?? "http://localhost:3000";
+  return `${base}/order/${token}`;
 }
 
-export async function sendProofRejectedEmail(_orderId: string): Promise<void> {
-  console.log(`[email stub] would send proof-rejected email for order ${_orderId}`);
+async function safeSend(args: { to: string; subject: string; html: string }): Promise<void> {
+  try {
+    await resend.emails.send({ from: FROM_ADDRESS, to: args.to, subject: args.subject, html: args.html });
+  } catch (error) {
+    console.error("Failed to send email:", args.subject, "to", args.to, error);
+  }
+}
+
+export async function sendOrderCreatedEmails(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({
+    where: { id: orderId },
+    include: { items: true },
+  });
+  const settings = await prisma.adminSettings.findUniqueOrThrow({ where: { id: "singleton" } });
+
+  await safeSend({
+    to: settings.adminNotificationEmail,
+    subject: `Order baru masuk: ${order.orderNumber}`,
+    html: `<p>Order baru dari ${order.buyerName} sebesar ${formatRupiah(order.total)}.</p>
+           <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
+  });
+
+  await safeSend({
+    to: order.buyerEmail,
+    subject: `Pesanan kamu diterima: ${order.orderNumber}`,
+    html: `<p>Halo ${order.buyerName}, pesanan kamu sebesar ${formatRupiah(order.total)} sudah diterima.</p>
+           <p>Silakan transfer ke: ${settings.bankName} ${settings.bankAccountNumber} a.n. ${settings.bankAccountName}.</p>
+           <p>Lalu upload bukti transfer di halaman berikut:</p>
+           <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
+  });
+}
+
+export async function sendProofUploadedNotificationToAdmin(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+  const settings = await prisma.adminSettings.findUniqueOrThrow({ where: { id: "singleton" } });
+
+  await safeSend({
+    to: settings.adminNotificationEmail,
+    subject: `Bukti transfer baru: ${order.orderNumber}`,
+    html: `<p>Order ${order.orderNumber} dari ${order.buyerName} sudah upload bukti transfer, mohon dicek.</p>
+           <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
+  });
+}
+
+export async function sendPaymentConfirmedEmails(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({
+    where: { id: orderId },
+    include: { items: { include: { vendor: true } } },
+  });
+
+  await safeSend({
+    to: order.buyerEmail,
+    subject: `Pembayaran dikonfirmasi: ${order.orderNumber}`,
+    html: `<p>Halo ${order.buyerName}, pembayaran untuk order ${order.orderNumber} sudah dikonfirmasi. Terima kasih!</p>`,
+  });
+
+  const vendorEmails = new Map(order.items.map((item) => [item.vendor.id, item.vendor.email]));
+  for (const [vendorId, vendorEmail] of vendorEmails) {
+    const vendorItemCount = order.items.filter((i) => i.vendor.id === vendorId).length;
+    await safeSend({
+      to: vendorEmail,
+      subject: `Order baru untuk diproses: ${order.orderNumber}`,
+      html: `<p>Ada order baru (${vendorItemCount} item) yang sudah dibayar dan perlu kamu proses.</p>
+             <p>Cek di panel vendor kamu.</p>`,
+    });
+  }
+}
+
+export async function sendProofRejectedEmail(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+
+  await safeSend({
+    to: order.buyerEmail,
+    subject: `Bukti transfer belum valid: ${order.orderNumber}`,
+    html: `<p>Halo ${order.buyerName}, bukti transfer untuk order ${order.orderNumber} belum bisa diverifikasi.</p>
+           <p>Silakan upload ulang di: <a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
+  });
+}
+
+export async function sendReminderEmail(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+
+  await safeSend({
+    to: order.buyerEmail,
+    subject: `Reminder: order ${order.orderNumber} belum dibayar`,
+    html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sebesar ${formatRupiah(order.total)} belum kami terima pembayarannya.</p>
+           <p>Order akan kedaluwarsa otomatis jika belum dibayar dalam 3x24 jam sejak dibuat.</p>
+           <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
+  });
+}
+
+export async function sendExpiredEmail(orderId: string): Promise<void> {
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+
+  await safeSend({
+    to: order.buyerEmail,
+    subject: `Order kedaluwarsa: ${order.orderNumber}`,
+    html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sudah kedaluwarsa karena belum ada pembayaran.</p>
+           <p>Kalau kamu masih ingin memesan, silakan buat pesanan baru.</p>`,
+  });
 }
