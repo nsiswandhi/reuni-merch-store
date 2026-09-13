@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.0.3",
     "@prisma/client": "6.19.3",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.12",
