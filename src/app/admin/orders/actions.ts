@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { canConfirmPayment, canRejectProof } from "@/lib/order-status";
 import { sendPaymentConfirmedEmails, sendProofRejectedEmail } from "@/lib/email";
+import { requireAdmin } from "@/lib/auth/current-user";
 
 export async function confirmPayment(orderId: string): Promise<void> {
+  await requireAdmin();
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   if (!canConfirmPayment(order.status)) {
     throw new Error("Order tidak dalam status yang bisa dikonfirmasi.");
@@ -20,6 +22,7 @@ export async function confirmPayment(orderId: string): Promise<void> {
 }
 
 export async function rejectProof(orderId: string): Promise<void> {
+  await requireAdmin();
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   if (!canRejectProof(order.status)) {
     throw new Error("Order tidak dalam status yang bisa ditolak buktinya.");

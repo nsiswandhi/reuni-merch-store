@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { uploadBufferToBlobs } from "@/lib/blobs";
+import { uploadBufferToBlobs, validateUploadFile } from "@/lib/blobs";
+import { requireAdmin } from "@/lib/auth/current-user";
 
 function slugify(name: string): string {
   return name
@@ -17,10 +18,16 @@ const productSchema = z.object({
   vendorId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().default(""),
-  basePrice: z.coerce.number().int().min(0),
+  basePrice: z.coerce.number().int().min(1),
 });
 
 export async function createProduct(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
   const parsed = productSchema.safeParse({
     vendorId: formData.get("vendorId"),
     name: formData.get("name"),
@@ -34,6 +41,10 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
   let imageUrl = "";
   const imageFile = formData.get("image");
   if (imageFile instanceof File && imageFile.size > 0) {
+    const validationError = validateUploadFile(imageFile);
+    if (validationError) {
+      return { error: validationError };
+    }
     const buffer = Buffer.from(await imageFile.arrayBuffer());
     imageUrl = await uploadBufferToBlobs(`product-images/${Date.now()}-${imageFile.name}`, buffer, imageFile.type);
   }
@@ -55,6 +66,7 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
 }
 
 export async function deleteProduct(productId: string): Promise<void> {
+  await requireAdmin();
   await prisma.product.update({ where: { id: productId }, data: { isActive: false } });
   revalidatePath("/admin/products");
   revalidatePath("/");
@@ -63,10 +75,16 @@ export async function deleteProduct(productId: string): Promise<void> {
 const variantSchema = z.object({
   productId: z.string().min(1),
   label: z.string().min(1),
-  price: z.coerce.number().int().min(0),
+  price: z.coerce.number().int().min(1),
 });
 
 export async function addVariant(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
   const parsed = variantSchema.safeParse({
     productId: formData.get("productId"),
     label: formData.get("label"),
@@ -77,10 +95,13 @@ export async function addVariant(formData: FormData): Promise<{ error?: string }
   }
   await prisma.productVariant.create({ data: parsed.data });
   revalidatePath("/admin/products");
+  revalidatePath("/");
   return {};
 }
 
 export async function deleteVariant(variantId: string): Promise<void> {
+  await requireAdmin();
   await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: false } });
   revalidatePath("/admin/products");
+  revalidatePath("/");
 }

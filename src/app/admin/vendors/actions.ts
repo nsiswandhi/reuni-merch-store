@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
+import { requireAdmin } from "@/lib/auth/current-user";
 
 const createVendorSchema = z.object({
   brandName: z.string().min(1),
@@ -14,6 +15,12 @@ const createVendorSchema = z.object({
 });
 
 export async function createVendor(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
   const parsed = createVendorSchema.safeParse({
     brandName: formData.get("brandName"),
     ownerName: formData.get("ownerName"),
@@ -45,6 +52,12 @@ const resetPasswordSchema = z.object({
 });
 
 export async function resetVendorPassword(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
   const parsed = resetPasswordSchema.safeParse({
     vendorId: formData.get("vendorId"),
     newPassword: formData.get("newPassword"),

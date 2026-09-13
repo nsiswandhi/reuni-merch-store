@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth/current-user";
 
 const settingsSchema = z.object({
   bankName: z.string().min(1),
@@ -13,6 +14,12 @@ const settingsSchema = z.object({
 });
 
 export async function updateSettings(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
   const parsed = settingsSchema.safeParse({
     bankName: formData.get("bankName"),
     bankAccountNumber: formData.get("bankAccountNumber"),

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { requireAdmin } from "@/lib/auth/current-user";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: "Menunggu Pembayaran",
@@ -11,6 +12,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin();
+  } catch {
+    return new Response("Tidak diizinkan.", { status: 403 });
+  }
+
   const q = request.nextUrl.searchParams.get("q") ?? undefined;
   const vendorId = request.nextUrl.searchParams.get("vendorId") ?? undefined;
   const status = request.nextUrl.searchParams.get("status") ?? undefined;
