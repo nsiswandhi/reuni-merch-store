@@ -61,9 +61,10 @@ export async function createOrder(
     if (!product) {
       return { error: "Salah satu produk di keranjang sudah tidak tersedia." };
     }
+    const hasActiveVariants = product.variants.some((v) => v.isActive);
     const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId && v.isActive) : null;
-    if (item.variantId && !variant) {
-      return { error: "Salah satu varian produk sudah tidak tersedia." };
+    if (hasActiveVariants && !variant) {
+      return { error: "Varian produk wajib dipilih." };
     }
     resolvedItems.push({
       productId: product.id,
