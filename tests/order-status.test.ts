@@ -58,4 +58,19 @@ describe("getReminderAction", () => {
     const now = new Date("2026-01-03T02:00:00Z");
     expect(getReminderAction(createdAt, 2, now)).toBe("NONE");
   });
+
+  it("sends the first reminder at exactly 24 hours", () => {
+    const now = new Date("2026-01-02T00:00:00Z");
+    expect(getReminderAction(createdAt, 0, now)).toBe("SEND_REMINDER");
+  });
+
+  it("sends the second reminder at exactly 48 hours", () => {
+    const now = new Date("2026-01-03T00:00:00Z");
+    expect(getReminderAction(createdAt, 1, now)).toBe("SEND_REMINDER");
+  });
+
+  it("expires at exactly 72 hours", () => {
+    const now = new Date("2026-01-04T00:00:00Z");
+    expect(getReminderAction(createdAt, 2, now)).toBe("EXPIRE");
+  });
 });
