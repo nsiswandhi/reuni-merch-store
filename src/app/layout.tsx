@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// NOTE: the default create-next-app template used next/font/google (Geist).
+// This sandbox's network cannot reach fonts.googleapis.com/fonts.gstatic.com,
+// which broke `npm run build` here. Task 32 (branding pass) replaces this
+// placeholder entirely with the InVnity brand fonts (Bebas Neue / Montserrat)
+// self-hosted via next/font/local, so no next/font/google usage remains
+// anywhere in the finished app.
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,11 +15,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }
