@@ -9,7 +9,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
   const vendorId = session!.vendorId!;
 
   const items = await prisma.orderItem.findMany({
-    where: { orderId: id, vendorId },
+    where: { orderId: id, vendorId, order: { status: "PAID" } },
     include: { order: true },
   });
 

@@ -15,10 +15,11 @@ export async function updateFulfillmentStatus(orderId: string, formData: FormDat
     throw new Error("Status tidak valid.");
   }
 
-  // Scoped to orderId AND vendorId — updateMany silently affects zero rows if this
-  // vendor has no items in that order, which is the correct "no access" behavior.
+  // Scoped to orderId AND vendorId AND order.status === "PAID" — updateMany silently
+  // affects zero rows if this vendor has no items in that (PAID) order, which is the
+  // correct "no access" behavior (vendors can't act on unpaid/expired orders — I7).
   await prisma.orderItem.updateMany({
-    where: { orderId, vendorId: session.vendorId },
+    where: { orderId, vendorId: session.vendorId, order: { status: "PAID" } },
     data: { fulfillmentStatus: newStatus },
   });
 
