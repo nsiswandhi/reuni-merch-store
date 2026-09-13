@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { canUploadProof } from "@/lib/order-status";
 import { validateUploadFile, uploadBufferToBlobs } from "@/lib/blobs";
+import { sendProofUploadedNotificationToAdmin } from "@/lib/email";
 
 export async function uploadPaymentProof(orderToken: string, formData: FormData): Promise<{ error?: string }> {
   const order = await prisma.order.findUnique({ where: { token: orderToken } });
@@ -36,6 +37,8 @@ export async function uploadPaymentProof(orderToken: string, formData: FormData)
       status: "AWAITING_CONFIRMATION",
     },
   });
+
+  await sendProofUploadedNotificationToAdmin(order.id);
 
   revalidatePath(`/order/${orderToken}`);
   return {};
