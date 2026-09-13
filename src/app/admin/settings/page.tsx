@@ -7,7 +7,13 @@ export default async function AdminSettingsPage() {
   return (
     <main>
       <h1 className="mb-6 font-[Bebas_Neue] text-3xl text-[#124B23]">Pengaturan</h1>
-      <form action={updateSettings} className="flex max-w-md flex-col gap-3">
+      <form
+        action={async (formData: FormData) => {
+          "use server";
+          await updateSettings(formData);
+        }}
+        className="flex max-w-md flex-col gap-3"
+      >
         <label className="text-sm font-medium">Nama Bank</label>
         <input name="bankName" defaultValue={settings.bankName} className="rounded border border-gray-300 px-3 py-2" />
         <label className="text-sm font-medium">Nomor Rekening</label>
