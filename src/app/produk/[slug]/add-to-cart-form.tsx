@@ -10,6 +10,10 @@ interface VariantOption {
   price: number;
 }
 
+function formatRupiah(amount: number): string {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+}
+
 export function AddToCartForm({
   productId,
   productSlug,
@@ -55,7 +59,7 @@ export function AddToCartForm({
         >
           {variants.map((v) => (
             <option key={v.id} value={v.id}>
-              {v.label}
+              {v.label} — {formatRupiah(v.price)}
             </option>
           ))}
         </select>

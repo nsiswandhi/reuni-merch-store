@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { getProductBySlug } from "@/lib/products";
+import { getProductBySlug, getDisplayPriceRange } from "@/lib/products";
 import { AddToCartForm } from "./add-to-cart-form";
 
 function formatRupiah(amount: number): string {
@@ -15,6 +15,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
+  const { min, max } = getDisplayPriceRange(product);
+  const priceDisplay = min === max ? formatRupiah(min) : `${formatRupiah(min)} – ${formatRupiah(max)}`;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <div className="relative mb-4 aspect-square w-full bg-gray-100">
@@ -23,9 +26,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <p className="text-sm text-gray-500">{product.vendor.brandName}</p>
       <h1 className="mb-2 font-[Bebas_Neue] text-3xl text-[#124B23]">{product.name}</h1>
       <p className="mb-4 text-gray-700">{product.description}</p>
-      <p className="mb-4 text-xl font-semibold">
-        {product.variants.length === 0 ? formatRupiah(product.basePrice) : ""}
-      </p>
+      <p className="mb-4 text-xl font-semibold">{priceDisplay}</p>
       <AddToCartForm
         productId={product.id}
         productSlug={product.slug}
