@@ -1,7 +1,6 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_ADDRESS = "Reuni Akbar InVnity <no-reply@invnity-reuni.example>";
 
 function formatRupiah(amount: number): string {
@@ -15,6 +14,10 @@ function orderUrl(token: string): string {
 
 async function safeSend(args: { to: string; subject: string; html: string }): Promise<void> {
   try {
+    // Constructed here (not at module scope) so a missing/invalid RESEND_API_KEY
+    // is caught by this same try/catch instead of throwing at import time and
+    // crashing every route that imports this module (checkout, confirm/reject, etc).
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: FROM_ADDRESS, to: args.to, subject: args.subject, html: args.html });
   } catch (error) {
     console.error("Failed to send email:", args.subject, "to", args.to, error);
