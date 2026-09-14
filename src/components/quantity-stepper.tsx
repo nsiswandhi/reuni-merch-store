@@ -2,8 +2,8 @@
 
 // Drawn with CSS bars instead of the "+"/"−" text glyphs: those two characters
 // have different side-bearings in the deployed font, so even identical
-// centering CSS left the "+" looking off-center with extra whitespace on one
-// side. Bars of the same length are always pixel-symmetric.
+// centering CSS left the "+" looking off-center within its own button. Bars
+// of the same length are always pixel-symmetric within a button.
 function MinusGlyph() {
   return <span aria-hidden="true" className="block h-0.5 w-3 bg-current" />;
 }
@@ -38,7 +38,13 @@ export function QuantityStepper({
   }
 
   return (
-    <div className={`inline-flex items-stretch rounded border border-gray-300 ${className}`}>
+    // w-fit: this component is used inside a `flex flex-col` parent
+    // (add-to-cart-form.tsx), whose default `align-items: stretch` was
+    // otherwise stretching this box to the parent's full width — leaving a
+    // block of empty space after the "+" button, inside the rounded border,
+    // that read as "whitespace to the right of +". An explicit width
+    // overrides the stretch.
+    <div className={`inline-flex w-fit items-stretch rounded border border-gray-300 ${className}`}>
       <button
         type="button"
         onClick={() => onChange(clamp(value - 1))}
