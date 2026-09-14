@@ -1,17 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getActiveProducts, getDisplayPriceRange } from "@/lib/products";
+import { getActiveProducts, getDisplayPriceRange, sortProducts, parseProductSort } from "@/lib/products";
+import { SortSelect } from "./sort-select";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
 }
 
-export default async function KatalogPage() {
-  const products = await getActiveProducts();
+export default async function KatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string }>;
+}) {
+  const { sort } = await searchParams;
+  const sortOption = parseProductSort(sort);
+  const products = sortProducts(await getActiveProducts(), sortOption);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 font-[Bebas_Neue] text-4xl text-[#124B23]">Merchandise Reuni Akbar InVnity 2026</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-[Bebas_Neue] text-4xl text-[#124B23]">Merchandise Reuni Akbar InVnity 2026</h1>
+        {products.length > 0 && <SortSelect current={sortOption} />}
+      </div>
       {products.length === 0 ? (
         <p className="text-gray-500">Belum ada produk tersedia.</p>
       ) : (
