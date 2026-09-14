@@ -10,9 +10,12 @@ function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
 }
 
+function siteBase(): string {
+  return process.env.SITE_URL ?? "http://localhost:3000";
+}
+
 function orderUrl(token: string): string {
-  const base = process.env.SITE_URL ?? "http://localhost:3000";
-  return `${base}/order/${token}`;
+  return `${siteBase()}/order/${token}`;
 }
 
 async function safeSend(args: { to: string; subject: string; html: string }): Promise<void> {
@@ -42,11 +45,17 @@ export async function sendOrderCreatedEmails(orderId: string): Promise<void> {
              <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
     });
 
+    const qrisHtml = settings.qrisImageUrl
+      ? `<p>Atau scan QRIS berikut:</p>
+         <p><img src="${siteBase()}${settings.qrisImageUrl}" alt="QRIS" width="200" style="max-width:200px;height:auto;" /></p>`
+      : "";
+
     await safeSend({
       to: order.buyerEmail,
       subject: `Pesanan kamu diterima: ${order.orderNumber}`,
       html: `<p>Halo ${order.buyerName}, pesanan kamu sebesar ${formatRupiah(order.total)} sudah diterima.</p>
              <p>Silakan transfer ke: ${settings.bankName} ${settings.bankAccountNumber} a.n. ${settings.bankAccountName}.</p>
+             ${qrisHtml}
              <p>Lalu upload bukti transfer di halaman berikut:</p>
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
     });

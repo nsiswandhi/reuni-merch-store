@@ -84,12 +84,13 @@ model ProductVariant {
 }
 
 model AdminSettings {
-  id                    String @id @default("singleton")
-  bankName              String @default("")
-  bankAccountNumber     String @default("")
-  bankAccountName       String @default("")
-  shippingFlatRate      Int    @default(0)
+  id                    String  @id @default("singleton")
+  bankName              String  @default("")
+  bankAccountNumber     String  @default("")
+  bankAccountName       String  @default("")
+  shippingFlatRate      Int     @default(0)
   adminNotificationEmail String @default("")
+  qrisImageUrl          String?
 }
 
 model Order {

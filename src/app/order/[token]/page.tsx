@@ -43,6 +43,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ to
         <section className="mb-6 rounded border border-gray-200 p-4">
           <h2 className="mb-2 font-semibold">Info Pembayaran</h2>
           <p>Transfer ke: {settings.bankName} {settings.bankAccountNumber} a.n. {settings.bankAccountName}</p>
+          {settings.qrisImageUrl && (
+            <div className="my-3">
+              <p className="mb-1 text-sm text-gray-600">Atau scan QRIS berikut:</p>
+              {/* eslint-disable-next-line @next/next/no-img-element -- blob-hosted upload, not a static asset */}
+              <img src={settings.qrisImageUrl} alt="QRIS" className="h-48 w-48 rounded border border-gray-200 object-contain" />
+            </div>
+          )}
           <p className="mb-4 text-lg font-bold">Total: {formatRupiah(order.total)}</p>
           <UploadProofForm orderToken={order.token} />
         </section>

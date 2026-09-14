@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/current-user";
+import { uploadBufferToBlobs, validateUploadFile } from "@/lib/blobs";
 
 const settingsSchema = z.object({
   bankName: z.string().min(1),
@@ -30,7 +31,32 @@ export async function updateSettings(formData: FormData): Promise<{ error?: stri
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   }
-  await prisma.adminSettings.update({ where: { id: "singleton" }, data: parsed.data });
+
+  // QRIS is an optional payment method image — only replace it when a new
+  // file was chosen; leave the existing one alone otherwise.
+  let qrisImageUrl: string | undefined;
+  const qrisImage = formData.get("qrisImage");
+  if (qrisImage instanceof File && qrisImage.size > 0) {
+    const validationError = validateUploadFile(qrisImage);
+    if (validationError) {
+      return { error: validationError };
+    }
+    const buffer = Buffer.from(await qrisImage.arrayBuffer());
+    qrisImageUrl = await uploadBufferToBlobs(`qris/${Date.now()}-${qrisImage.name}`, buffer, qrisImage.type);
+  }
+
+  await prisma.adminSettings.update({
+    where: { id: "singleton" },
+    data: { ...parsed.data, ...(qrisImageUrl ? { qrisImageUrl } : {}) },
+  });
   revalidatePath("/admin/settings");
+  revalidatePath("/order/[token]", "page");
   return {};
+}
+
+export async function removeQrisImage(): Promise<void> {
+  await requireAdmin();
+  await prisma.adminSettings.update({ where: { id: "singleton" }, data: { qrisImageUrl: null } });
+  revalidatePath("/admin/settings");
+  revalidatePath("/order/[token]", "page");
 }
