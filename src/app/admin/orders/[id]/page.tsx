@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { confirmPayment, rejectProof } from "../actions";
@@ -20,6 +21,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   return (
     <main>
+      <Link href="/admin/orders" className="mb-3 inline-block text-sm underline">&larr; Kembali ke semua order</Link>
       <h1 className="mb-2 font-[Bebas_Neue] text-3xl text-[#124B23]">Order {order.orderNumber}</h1>
       <p className="mb-4">Status: <strong>{order.status}</strong></p>
       <p>Pembeli: {order.buyerName} (Angkatan {order.buyerAngkatan})</p>

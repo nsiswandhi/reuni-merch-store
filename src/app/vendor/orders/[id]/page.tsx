@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentSession } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +22,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
 
   return (
     <main>
+      <Link href="/vendor" className="mb-3 inline-block text-sm underline">&larr; Kembali ke semua order</Link>
       <h1 className="mb-2 text-2xl font-semibold">Order {order.orderNumber}</h1>
       <p className="mb-1">Pembeli: {order.buyerName} — WhatsApp: {order.buyerWhatsapp}</p>
       {order.shippingAddress && <p className="mb-4">Alamat: {order.shippingAddress}</p>}
