@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { addToCart } from "@/lib/cart";
+import { QuantityStepper } from "@/components/quantity-stepper";
 
 interface VariantOption {
   id: string;
@@ -64,13 +65,7 @@ export function AddToCartForm({
           ))}
         </select>
       )}
-      <input
-        type="number"
-        min={1}
-        value={qty}
-        onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
-        className="w-24 rounded border border-gray-300 px-3 py-2"
-      />
+      <QuantityStepper value={qty} onChange={setQty} />
       <button
         onClick={handleAdd}
         className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white"

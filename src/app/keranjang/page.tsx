@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getCart, removeFromCart, updateCartQty, type CartItem } from "@/lib/cart";
+import { QuantityStepper } from "@/components/quantity-stepper";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -45,12 +46,9 @@ export default function KeranjangPage() {
                     <p className="text-sm">{formatRupiah(item.unitPrice)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
+                    <QuantityStepper
                       value={item.qty}
-                      onChange={(e) => setItems(updateCartQty(item.itemKey, Number(e.target.value)))}
-                      className="w-16 rounded border border-gray-300 px-2 py-1"
+                      onChange={(next) => setItems(updateCartQty(item.itemKey, next))}
                     />
                     <button
                       onClick={() => setItems(removeFromCart(item.itemKey))}
