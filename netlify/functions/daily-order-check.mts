@@ -7,6 +7,7 @@ export default async () => {
   const now = new Date();
   const pendingOrders = await prisma.order.findMany({
     where: { status: "PENDING_PAYMENT" },
+    include: { items: true },
   });
 
   let remindersSent = 0;
@@ -23,10 +24,20 @@ export default async () => {
       });
       remindersSent++;
     } else if (action === "EXPIRE") {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: "EXPIRED" },
-      });
+      // Release any stock this order had reserved at checkout — it never
+      // got paid, so the units go back into the pool for other buyers.
+      await prisma.$transaction([
+        prisma.order.update({
+          where: { id: order.id },
+          data: { status: "EXPIRED" },
+        }),
+        ...order.items.map((item) =>
+          prisma.product.updateMany({
+            where: { id: item.productId, availabilityMode: "STOCK" },
+            data: { stock: { increment: item.qty } },
+          })
+        ),
+      ]);
       await sendExpiredEmail(order.id);
       expired++;
     }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getProductBySlug, getDisplayPriceRange } from "@/lib/products";
+import { getProductAvailability } from "@/lib/availability";
 import { AddToCartForm } from "./add-to-cart-form";
 
 function formatRupiah(amount: number): string {
@@ -17,6 +18,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const { min, max } = getDisplayPriceRange(product);
   const priceDisplay = min === max ? formatRupiah(min) : `${formatRupiah(min)} – ${formatRupiah(max)}`;
+  const availability = getProductAvailability(product);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -26,7 +28,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <p className="text-sm text-gray-500">{product.vendor.brandName}</p>
       <h1 className="mb-2 font-[Bebas_Neue] text-3xl text-[#124B23]">{product.name}</h1>
       <p className="mb-4 text-gray-700">{product.description}</p>
-      <p className="mb-4 text-xl font-semibold">{priceDisplay}</p>
+      <p className="mb-1 text-xl font-semibold">{priceDisplay}</p>
+      {product.availabilityMode === "LAST_ORDER_DATE" && product.lastOrderAt && availability.isAvailable && (
+        <p className="mb-3 text-sm text-gray-500">
+          Pemesanan hingga {product.lastOrderAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      )}
+      {product.availabilityMode === "STOCK" && availability.isAvailable && (
+        <p className="mb-3 text-sm text-gray-500">Sisa stok: {availability.remainingStock}</p>
+      )}
       <AddToCartForm
         productId={product.id}
         productSlug={product.slug}
@@ -34,6 +44,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         vendorBrandName={product.vendor.brandName}
         basePrice={product.basePrice}
         variants={product.variants.map((v) => ({ id: v.id, label: v.label, price: v.price }))}
+        available={availability.isAvailable}
+        unavailableReason={availability.reasonLabel}
+        maxQty={product.availabilityMode === "STOCK" ? availability.remainingStock : undefined}
       />
     </main>
   );

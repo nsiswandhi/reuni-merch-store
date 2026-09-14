@@ -22,6 +22,9 @@ export function AddToCartForm({
   vendorBrandName,
   basePrice,
   variants,
+  available = true,
+  unavailableReason,
+  maxQty,
 }: {
   productId: string;
   productSlug: string;
@@ -29,10 +32,13 @@ export function AddToCartForm({
   vendorBrandName: string;
   basePrice: number;
   variants: VariantOption[];
+  available?: boolean;
+  unavailableReason?: string;
+  maxQty?: number;
 }) {
   const router = useRouter();
   const [variantId, setVariantId] = useState<string>(variants[0]?.id ?? "");
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(maxQty !== undefined ? Math.min(1, maxQty) : 1);
 
   function handleAdd() {
     const variant = variants.find((v) => v.id === variantId) ?? null;
@@ -50,6 +56,22 @@ export function AddToCartForm({
     router.push("/keranjang");
   }
 
+  if (!available) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="rounded border border-gray-300 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-600">
+          {unavailableReason ?? "Produk tidak tersedia"}
+        </p>
+        <button
+          disabled
+          className="rounded bg-gray-300 px-4 py-2 font-semibold text-gray-500"
+        >
+          Tambah ke Keranjang
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {variants.length > 0 && (
@@ -65,7 +87,7 @@ export function AddToCartForm({
           ))}
         </select>
       )}
-      <QuantityStepper value={qty} onChange={setQty} />
+      <QuantityStepper value={qty} onChange={setQty} max={maxQty} />
       <button
         onClick={handleAdd}
         className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white"

@@ -21,19 +21,28 @@ export function QuantityStepper({
   value,
   onChange,
   min = 1,
+  max,
+  disabled = false,
   className = "",
 }: {
   value: number;
   onChange: (next: number) => void;
   min?: number;
+  max?: number;
+  disabled?: boolean;
   className?: string;
 }) {
+  function clamp(next: number): number {
+    const lower = Math.max(min, next);
+    return max !== undefined ? Math.min(max, lower) : lower;
+  }
+
   return (
     <div className={`inline-flex items-stretch rounded border border-gray-300 ${className}`}>
       <button
         type="button"
-        onClick={() => onChange(Math.max(min, value - 1))}
-        disabled={value <= min}
+        onClick={() => onChange(clamp(value - 1))}
+        disabled={disabled || value <= min}
         aria-label="Kurangi jumlah"
         className="flex h-10 w-10 items-center justify-center text-[#124B23] disabled:opacity-30"
       >
@@ -43,15 +52,18 @@ export function QuantityStepper({
         type="number"
         inputMode="numeric"
         min={min}
+        max={max}
         value={value}
-        onChange={(e) => onChange(Math.max(min, Math.trunc(Number(e.target.value)) || min))}
-        className="h-10 w-12 border-x border-gray-300 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        disabled={disabled}
+        onChange={(e) => onChange(clamp(Math.trunc(Number(e.target.value)) || min))}
+        className="h-10 w-12 border-x border-gray-300 text-center disabled:opacity-30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(clamp(value + 1))}
+        disabled={disabled || (max !== undefined && value >= max)}
         aria-label="Tambah jumlah"
-        className="flex h-10 w-10 items-center justify-center text-[#124B23]"
+        className="flex h-10 w-10 items-center justify-center text-[#124B23] disabled:opacity-30"
       >
         <PlusGlyph />
       </button>

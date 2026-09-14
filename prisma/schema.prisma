@@ -26,6 +26,12 @@ enum FulfillmentStatus {
   DONE
 }
 
+enum AvailabilityMode {
+  ALWAYS
+  LAST_ORDER_DATE
+  STOCK
+}
+
 model AdminUser {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -55,6 +61,9 @@ model Product {
   imageUrl    String    @default("")
   basePrice   Int
   isActive    Boolean   @default(true)
+  availabilityMode AvailabilityMode @default(ALWAYS)
+  lastOrderAt DateTime?
+  stock       Int?
   createdAt   DateTime  @default(now())
   variants    ProductVariant[]
   orderItems  OrderItem[]

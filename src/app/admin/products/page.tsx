@@ -23,6 +23,13 @@ export default async function AdminProductsPage() {
               <div>
                 <p className="font-semibold">{product.name}</p>
                 <p className="text-sm text-gray-500">{product.vendor.brandName}</p>
+                <p className="text-xs text-gray-500">
+                  {product.availabilityMode === "ALWAYS" && "Selalu tersedia"}
+                  {product.availabilityMode === "LAST_ORDER_DATE" &&
+                    product.lastOrderAt &&
+                    `Batas order: ${product.lastOrderAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
+                  {product.availabilityMode === "STOCK" && `Stok: ${product.stock ?? 0}`}
+                </p>
               </div>
               <form action={deleteProduct.bind(null, product.id)}>
                 <button type="submit" className="text-sm text-red-600 underline">Nonaktifkan</button>

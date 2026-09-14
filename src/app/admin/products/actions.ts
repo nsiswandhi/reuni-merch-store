@@ -14,12 +14,27 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-const productSchema = z.object({
-  vendorId: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().default(""),
-  basePrice: z.coerce.number().int().min(1),
-});
+const productSchema = z
+  .object({
+    vendorId: z.string().min(1),
+    name: z.string().min(1),
+    description: z.string().default(""),
+    basePrice: z.coerce.number().int().min(1),
+    availabilityMode: z.enum(["ALWAYS", "LAST_ORDER_DATE", "STOCK"]).default("ALWAYS"),
+    lastOrderAt: z.string().optional(),
+    stock: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.availabilityMode === "LAST_ORDER_DATE" && !data.lastOrderAt) {
+      ctx.addIssue({ code: "custom", message: "Tanggal batas order wajib diisi.", path: ["lastOrderAt"] });
+    }
+    if (data.availabilityMode === "STOCK") {
+      const stockNum = Number(data.stock);
+      if (!data.stock || Number.isNaN(stockNum) || stockNum < 0) {
+        ctx.addIssue({ code: "custom", message: "Jumlah stok wajib diisi.", path: ["stock"] });
+      }
+    }
+  });
 
 export async function createProduct(formData: FormData): Promise<{ error?: string }> {
   try {
@@ -33,6 +48,9 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
     name: formData.get("name"),
     description: formData.get("description"),
     basePrice: formData.get("basePrice"),
+    availabilityMode: formData.get("availabilityMode") || undefined,
+    lastOrderAt: formData.get("lastOrderAt") || undefined,
+    stock: formData.get("stock") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
@@ -56,8 +74,19 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
     slug = `${baseSlug}-${suffix++}`;
   }
 
+  const { availabilityMode, lastOrderAt, stock, ...productData } = parsed.data;
+
   await prisma.product.create({
-    data: { ...parsed.data, slug, imageUrl },
+    data: {
+      ...productData,
+      slug,
+      imageUrl,
+      availabilityMode,
+      // Stored as end-of-day WIB (UTC+7) so the deadline covers the whole
+      // Indonesia-local day the admin picked, not just until UTC midnight.
+      lastOrderAt: availabilityMode === "LAST_ORDER_DATE" ? new Date(`${lastOrderAt}T23:59:59+07:00`) : null,
+      stock: availabilityMode === "STOCK" ? Number(stock) : null,
+    },
   });
 
   revalidatePath("/admin/products");

@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { createProduct, addVariant } from "./actions";
 
+type AvailabilityMode = "ALWAYS" | "LAST_ORDER_DATE" | "STOCK";
+
 export function NewProductForm({ vendors }: { vendors: { id: string; brandName: string }[] }) {
   const [error, setError] = useState<string | null>(null);
+  const [availabilityMode, setAvailabilityMode] = useState<AvailabilityMode>("ALWAYS");
 
   async function handleSubmit(formData: FormData) {
     const result = await createProduct(formData);
@@ -28,6 +31,39 @@ export function NewProductForm({ vendors }: { vendors: { id: string; brandName: 
         accept="image/*"
         className="cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-[#124B23] file:px-3 file:py-1.5 file:font-medium file:text-white"
       />
+
+      <div className="mt-2 rounded border border-gray-200 p-3">
+        <p className="mb-2 text-sm font-semibold">Ketersediaan</p>
+        <select
+          name="availabilityMode"
+          value={availabilityMode}
+          onChange={(e) => setAvailabilityMode(e.target.value as AvailabilityMode)}
+          className="mb-2 w-full rounded border border-gray-300 px-3 py-2"
+        >
+          <option value="ALWAYS">Selalu Tersedia</option>
+          <option value="LAST_ORDER_DATE">Batas Tanggal Order</option>
+          <option value="STOCK">Stok Terbatas</option>
+        </select>
+        {availabilityMode === "LAST_ORDER_DATE" && (
+          <input
+            name="lastOrderAt"
+            type="date"
+            required
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        )}
+        {availabilityMode === "STOCK" && (
+          <input
+            name="stock"
+            type="number"
+            min={0}
+            placeholder="Jumlah stok"
+            required
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+        )}
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white">Simpan Produk</button>
     </form>
