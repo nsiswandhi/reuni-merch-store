@@ -48,6 +48,10 @@ model Vendor {
   email        String   @unique
   passwordHash String
   isActive     Boolean  @default(true)
+  // Some vendors can't hand off items in person at the event venue and can
+  // only ship — defaults to true so existing vendors keep today's behavior
+  // (both pickup and shipping allowed) until an admin turns it off.
+  allowsPickup Boolean  @default(true)
   createdAt    DateTime @default(now())
   products     Product[]
   orderItems   OrderItem[]

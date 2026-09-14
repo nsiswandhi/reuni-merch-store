@@ -37,7 +37,12 @@ export default function KeranjangPage() {
         <>
           {Object.entries(grouped).map(([vendorName, vendorItems]) => (
             <section key={vendorName} className="mb-6">
-              <h2 className="mb-2 font-semibold text-gray-600">{vendorName}</h2>
+              <h2 className="mb-2 font-semibold text-gray-600">
+                {vendorName}
+                {vendorItems.some((i) => i.vendorAllowsPickup === false) && (
+                  <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs font-normal text-gray-600">Hanya Dikirim</span>
+                )}
+              </h2>
               {vendorItems.map((item) => (
                 <div key={item.itemKey} className="mb-2 flex items-center justify-between gap-2 border-b pb-2">
                   <div>

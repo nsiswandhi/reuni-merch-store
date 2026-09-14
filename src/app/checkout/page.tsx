@@ -15,8 +15,16 @@ const initialState: CreateOrderState = {};
 export default function CheckoutPage() {
   const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
-  const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "SHIPPING">("PICKUP");
+  const [deliveryMethodChoice, setDeliveryMethodChoice] = useState<"PICKUP" | "SHIPPING">("PICKUP");
   const [state, formAction, pending] = useActionState(createOrder, initialState);
+
+  // A cart item from before this feature shipped has no vendorAllowsPickup
+  // in its stored JSON — treat that as "allowed" (today's behavior) rather
+  // than silently blocking pickup for pre-existing carts.
+  const mustShip = items.some((i) => i.vendorAllowsPickup === false);
+  // Derived, not synced via effect: when the cart forces shipping, this
+  // overrides whatever the buyer had picked before that became true.
+  const deliveryMethod = mustShip ? "SHIPPING" : deliveryMethodChoice;
 
   useEffect(() => {
     const cart = getCart();
@@ -53,27 +61,34 @@ export default function CheckoutPage() {
         <input name="buyerWhatsapp" placeholder="No. WhatsApp" required className="rounded border border-gray-300 px-3 py-2" />
 
         <fieldset className="flex gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="deliveryMethod"
-              value="PICKUP"
-              checked={deliveryMethod === "PICKUP"}
-              onChange={() => setDeliveryMethod("PICKUP")}
-            />
-            Ambil di Venue
-          </label>
+          {!mustShip && (
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="deliveryMethod"
+                value="PICKUP"
+                checked={deliveryMethod === "PICKUP"}
+                onChange={() => setDeliveryMethodChoice("PICKUP")}
+              />
+              Ambil di Venue
+            </label>
+          )}
           <label className="flex items-center gap-2">
             <input
               type="radio"
               name="deliveryMethod"
               value="SHIPPING"
               checked={deliveryMethod === "SHIPPING"}
-              onChange={() => setDeliveryMethod("SHIPPING")}
+              onChange={() => setDeliveryMethodChoice("SHIPPING")}
             />
             Dikirim
           </label>
         </fieldset>
+        {mustShip && (
+          <p className="text-sm text-gray-500">
+            Salah satu vendor di keranjangmu hanya melayani pengiriman, jadi pesanan ini otomatis dikirim.
+          </p>
+        )}
 
         {deliveryMethod === "SHIPPING" && (
           <textarea

@@ -19,6 +19,10 @@ export function NewVendorForm() {
       <input name="angkatan" placeholder="Angkatan" required className="rounded border border-gray-300 px-3 py-2" />
       <input name="email" type="email" placeholder="Email login" required className="rounded border border-gray-300 px-3 py-2" />
       <input name="password" type="password" placeholder="Password" required className="rounded border border-gray-300 px-3 py-2" />
+      <label className="flex items-center gap-2 text-sm">
+        <input name="allowsPickup" type="checkbox" defaultChecked />
+        Bisa diambil di venue (pickup)
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white">Simpan Vendor</button>
     </form>
@@ -49,6 +53,7 @@ interface VendorFields {
   ownerName: string;
   angkatan: string;
   email: string;
+  allowsPickup: boolean;
 }
 
 export function EditVendorForm({ vendor }: { vendor: VendorFields }) {
@@ -80,6 +85,10 @@ export function EditVendorForm({ vendor }: { vendor: VendorFields }) {
       <input name="ownerName" defaultValue={vendor.ownerName} required placeholder="Nama Pemilik" className="rounded border border-gray-300 px-2 py-1 text-sm" />
       <input name="angkatan" defaultValue={vendor.angkatan} required placeholder="Angkatan" className="rounded border border-gray-300 px-2 py-1 text-sm" />
       <input name="email" type="email" defaultValue={vendor.email} required placeholder="Email login" className="rounded border border-gray-300 px-2 py-1 text-sm" />
+      <label className="flex items-center gap-2 text-sm">
+        <input name="allowsPickup" type="checkbox" defaultChecked={vendor.allowsPickup} />
+        Bisa diambil di venue (pickup)
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" className="rounded bg-[#124B23] px-3 py-1 text-sm text-white">Simpan</button>

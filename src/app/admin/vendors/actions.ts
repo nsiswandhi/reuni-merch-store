@@ -38,8 +38,11 @@ export async function createVendor(formData: FormData): Promise<{ error?: string
   }
 
   const { password, ...rest } = parsed.data;
+  // Unchecked checkboxes are omitted from FormData entirely, so presence
+  // (not the value) is what marks the box as checked.
+  const allowsPickup = formData.get("allowsPickup") === "on";
   await prisma.vendor.create({
-    data: { ...rest, passwordHash: await hashPassword(password) },
+    data: { ...rest, allowsPickup, passwordHash: await hashPassword(password) },
   });
 
   revalidatePath("/admin/vendors");
@@ -108,7 +111,8 @@ export async function updateVendor(formData: FormData): Promise<{ error?: string
     return { error: "Email vendor sudah dipakai." };
   }
 
-  await prisma.vendor.update({ where: { id: vendorId }, data: rest });
+  const allowsPickup = formData.get("allowsPickup") === "on";
+  await prisma.vendor.update({ where: { id: vendorId }, data: { ...rest, allowsPickup } });
   revalidatePath("/admin/vendors");
   return {};
 }

@@ -48,9 +48,16 @@ export async function createOrder(
   const productIds = [...new Set(items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isActive: true },
-    include: { variants: true },
+    include: { variants: true, vendor: { select: { allowsPickup: true } } },
   });
   const productById = new Map(products.map((p) => [p.id, p]));
+
+  // Same rule enforced client-side in checkout/page.tsx, re-checked here
+  // since the client's choice can never be trusted: if any item's vendor
+  // can't hand off in person, the whole order must be shipped.
+  if (deliveryMethod === "PICKUP" && products.some((p) => !p.vendor.allowsPickup)) {
+    return { error: "Salah satu vendor di pesananmu hanya melayani pengiriman — silakan pilih Dikirim." };
+  }
 
   const resolvedItems: {
     productId: string;

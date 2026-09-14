@@ -4,6 +4,10 @@ export interface CartItem {
   productSlug: string;
   productName: string;
   vendorBrandName: string;
+  // Whether this item's vendor can hand items off in person at the venue.
+  // false means this item can only ever be shipped — used at checkout to
+  // decide whether "Ambil di Venue" can be offered for the whole cart.
+  vendorAllowsPickup: boolean;
   variantId: string | null;
   variantLabel: string;
   unitPrice: number;

@@ -15,7 +15,12 @@ export default async function AdminVendorsPage() {
           <div key={vendor.id} className="rounded border border-gray-200 p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="font-semibold">{vendor.brandName}</p>
+                <p className="font-semibold">
+                  {vendor.brandName}
+                  {!vendor.allowsPickup && (
+                    <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs font-normal text-gray-600">Hanya Kirim</span>
+                  )}
+                </p>
                 <p className="text-sm text-gray-500">
                   {vendor.ownerName} — Angkatan {vendor.angkatan} — {vendor.email}
                 </p>

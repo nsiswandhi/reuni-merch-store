@@ -25,7 +25,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="relative mb-4 aspect-square w-full bg-gray-100">
         {product.imageUrl && <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />}
       </div>
-      <p className="text-sm text-gray-500">{product.vendor.brandName}</p>
+      <p className="text-sm text-gray-500">
+        {product.vendor.brandName}
+        {!product.vendor.allowsPickup && (
+          <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-600">Hanya Dikirim</span>
+        )}
+      </p>
       <h1 className="mb-2 font-[Bebas_Neue] text-3xl text-[#124B23]">{product.name}</h1>
       <p className="mb-4 text-gray-700">{product.description}</p>
       <p className="mb-1 text-xl font-semibold">{priceDisplay}</p>
@@ -42,6 +47,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         productSlug={product.slug}
         productName={product.name}
         vendorBrandName={product.vendor.brandName}
+        vendorAllowsPickup={product.vendor.allowsPickup}
         basePrice={product.basePrice}
         variants={product.variants.map((v) => ({ id: v.id, label: v.label, price: v.price }))}
         available={availability.isAvailable}

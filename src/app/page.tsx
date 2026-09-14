@@ -30,7 +30,12 @@ export default async function KatalogPage() {
                   )}
                 </div>
                 <div className="p-3">
-                  <p className="text-xs text-gray-500">{product.vendor.brandName}</p>
+                  <p className="text-xs text-gray-500">
+                    {product.vendor.brandName}
+                    {!product.vendor.allowsPickup && (
+                      <span className="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-600">Hanya Dikirim</span>
+                    )}
+                  </p>
                   <p className="font-semibold">{product.name}</p>
                   <p className="text-sm text-[#124B23]">
                     {min === max ? formatRupiah(min) : `Mulai dari ${formatRupiah(min)}`}

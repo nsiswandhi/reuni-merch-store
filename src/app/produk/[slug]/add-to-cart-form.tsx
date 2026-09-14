@@ -20,6 +20,7 @@ export function AddToCartForm({
   productSlug,
   productName,
   vendorBrandName,
+  vendorAllowsPickup,
   basePrice,
   variants,
   available = true,
@@ -30,6 +31,7 @@ export function AddToCartForm({
   productSlug: string;
   productName: string;
   vendorBrandName: string;
+  vendorAllowsPickup: boolean;
   basePrice: number;
   variants: VariantOption[];
   available?: boolean;
@@ -48,6 +50,7 @@ export function AddToCartForm({
       productSlug,
       productName,
       vendorBrandName,
+      vendorAllowsPickup,
       variantId: variant?.id ?? null,
       variantLabel: variant?.label ?? "",
       unitPrice: variant?.price ?? basePrice,
@@ -88,6 +91,9 @@ export function AddToCartForm({
         </select>
       )}
       <QuantityStepper value={qty} onChange={setQty} max={maxQty} />
+      {!vendorAllowsPickup && (
+        <p className="text-xs text-gray-500">Produk ini hanya bisa dikirim (vendor tidak melayani ambil di venue).</p>
+      )}
       <button
         onClick={handleAdd}
         className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white"
