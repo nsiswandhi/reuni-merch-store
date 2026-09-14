@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { confirmPayment, rejectProof } from "../actions";
+import { PaymentProofDialog } from "./payment-proof-dialog";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -29,7 +30,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       {order.paymentProofUrl && (
         <div className="mb-4">
           <p className="font-semibold">Bukti Transfer:</p>
-          <a href={order.paymentProofUrl} target="_blank" rel="noreferrer" className="underline">Lihat bukti</a>
+          <PaymentProofDialog url={order.paymentProofUrl} />
         </div>
       )}
 

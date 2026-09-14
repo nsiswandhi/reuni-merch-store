@@ -21,3 +21,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* All buttons show a pointer cursor on hover (native <button> default is "default",
+   not "pointer", unless a disabled state applies — matches links/other clickables). */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
