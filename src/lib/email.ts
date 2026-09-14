@@ -1,9 +1,10 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 
-// Resend's shared test domain: only delivers to the Resend account owner's own inbox
-// until a real verified domain replaces it. Known, accepted interim state (not a bug).
-const FROM_ADDRESS = "Reuni Akbar InVnity <onboarding@resend.dev>";
+// invnity.ialima.id is verified in Resend (SPF + DKIM DNS records added under the
+// ialima.id Cloudflare zone), so mail can now be delivered to any recipient, not just
+// the Resend account owner's own inbox (as onboarding@resend.dev was restricted to).
+const FROM_ADDRESS = "Reuni Akbar InVnity <no-reply@invnity.ialima.id>";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
