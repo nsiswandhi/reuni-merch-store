@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/auth/current-user";
+import { logout } from "@/app/login/actions";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getCurrentSession();
@@ -18,6 +19,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <li><Link href="/admin/vendors">Vendor</Link></li>
           <li><Link href="/admin/orders">Order</Link></li>
           <li><Link href="/admin/settings">Pengaturan</Link></li>
+          <li>
+            <form action={logout}>
+              <button type="submit" className="text-left text-red-600 hover:underline">Logout</button>
+            </form>
+          </li>
         </ul>
       </nav>
       <div className="flex-1 p-6">{children}</div>

@@ -56,3 +56,8 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
 
   return { error: "Email atau password salah." };
 }
+
+export async function logout(): Promise<void> {
+  (await cookies()).delete("session");
+  redirect("/login");
+}
