@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { confirmPayment, rejectProof } from "../actions";
+import { confirmPayment, rejectProof, cancelOrder } from "../actions";
+import { canCancelOrder } from "@/lib/order-status";
 import { PaymentProofDialog } from "./payment-proof-dialog";
+import { EditOrderForm } from "./edit-order-form";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -28,6 +30,25 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       <p>Email: {order.buyerEmail} — WhatsApp: {order.buyerWhatsapp}</p>
       <p>Pengiriman: {order.deliveryMethod}{order.shippingAddress ? ` — ${order.shippingAddress}` : ""}</p>
       <p className="mb-4 text-lg font-bold">Total: {formatRupiah(order.total)}</p>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <EditOrderForm
+          order={{
+            id: order.id,
+            buyerName: order.buyerName,
+            buyerAngkatan: order.buyerAngkatan,
+            buyerEmail: order.buyerEmail,
+            buyerWhatsapp: order.buyerWhatsapp,
+            deliveryMethod: order.deliveryMethod,
+            shippingAddress: order.shippingAddress,
+          }}
+        />
+        {canCancelOrder(order.status) && (
+          <form action={cancelOrder.bind(null, order.id)}>
+            <button type="submit" className="text-sm text-red-600 underline">Batalkan Order</button>
+          </form>
+        )}
+      </div>
 
       {order.paymentProofUrl && (
         <div className="mb-4">

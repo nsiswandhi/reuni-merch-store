@@ -14,27 +14,37 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-const productSchema = z
-  .object({
-    vendorId: z.string().min(1),
-    name: z.string().min(1),
-    description: z.string().default(""),
-    basePrice: z.coerce.number().int().min(1),
-    availabilityMode: z.enum(["ALWAYS", "LAST_ORDER_DATE", "STOCK"]).default("ALWAYS"),
-    lastOrderAt: z.string().optional(),
-    stock: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.availabilityMode === "LAST_ORDER_DATE" && !data.lastOrderAt) {
-      ctx.addIssue({ code: "custom", message: "Tanggal batas order wajib diisi.", path: ["lastOrderAt"] });
+const productBaseFields = z.object({
+  vendorId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().default(""),
+  basePrice: z.coerce.number().int().min(1),
+  availabilityMode: z.enum(["ALWAYS", "LAST_ORDER_DATE", "STOCK"]).default("ALWAYS"),
+  lastOrderAt: z.string().optional(),
+  stock: z.string().optional(),
+});
+
+// Shared by create and update — one place defining what "valid availability
+// fields" means, so the two schemas can't drift out of sync with each other.
+function checkAvailabilityFields(
+  data: { availabilityMode: "ALWAYS" | "LAST_ORDER_DATE" | "STOCK"; lastOrderAt?: string; stock?: string },
+  ctx: z.RefinementCtx
+) {
+  if (data.availabilityMode === "LAST_ORDER_DATE" && !data.lastOrderAt) {
+    ctx.addIssue({ code: "custom", message: "Tanggal batas order wajib diisi.", path: ["lastOrderAt"] });
+  }
+  if (data.availabilityMode === "STOCK") {
+    const stockNum = Number(data.stock);
+    if (!data.stock || Number.isNaN(stockNum) || stockNum < 0) {
+      ctx.addIssue({ code: "custom", message: "Jumlah stok wajib diisi.", path: ["stock"] });
     }
-    if (data.availabilityMode === "STOCK") {
-      const stockNum = Number(data.stock);
-      if (!data.stock || Number.isNaN(stockNum) || stockNum < 0) {
-        ctx.addIssue({ code: "custom", message: "Jumlah stok wajib diisi.", path: ["stock"] });
-      }
-    }
-  });
+  }
+}
+
+const productSchema = productBaseFields.superRefine(checkAvailabilityFields);
+const updateProductSchema = productBaseFields
+  .extend({ productId: z.string().min(1) })
+  .superRefine(checkAvailabilityFields);
 
 export async function createProduct(formData: FormData): Promise<{ error?: string }> {
   try {
@@ -94,9 +104,67 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
   return {};
 }
 
+export async function updateProduct(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
+  const parsed = updateProductSchema.safeParse({
+    productId: formData.get("productId"),
+    vendorId: formData.get("vendorId"),
+    name: formData.get("name"),
+    description: formData.get("description"),
+    basePrice: formData.get("basePrice"),
+    availabilityMode: formData.get("availabilityMode") || undefined,
+    lastOrderAt: formData.get("lastOrderAt") || undefined,
+    stock: formData.get("stock") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  // Image is optional on edit — only replace it when a new file was chosen.
+  let imageUrl: string | undefined;
+  const imageFile = formData.get("image");
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const validationError = validateUploadFile(imageFile);
+    if (validationError) {
+      return { error: validationError };
+    }
+    const buffer = Buffer.from(await imageFile.arrayBuffer());
+    imageUrl = await uploadBufferToBlobs(`product-images/${Date.now()}-${imageFile.name}`, buffer, imageFile.type);
+  }
+
+  const { productId, availabilityMode, lastOrderAt, stock, ...productData } = parsed.data;
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: {
+      ...productData,
+      ...(imageUrl ? { imageUrl } : {}),
+      availabilityMode,
+      lastOrderAt: availabilityMode === "LAST_ORDER_DATE" ? new Date(`${lastOrderAt}T23:59:59+07:00`) : null,
+      stock: availabilityMode === "STOCK" ? Number(stock) : null,
+    },
+  });
+
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  return {};
+}
+
 export async function deleteProduct(productId: string): Promise<void> {
   await requireAdmin();
   await prisma.product.update({ where: { id: productId }, data: { isActive: false } });
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+}
+
+export async function reactivateProduct(productId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.product.update({ where: { id: productId }, data: { isActive: true } });
   revalidatePath("/admin/products");
   revalidatePath("/");
 }
@@ -133,4 +201,39 @@ export async function deleteVariant(variantId: string): Promise<void> {
   await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: false } });
   revalidatePath("/admin/products");
   revalidatePath("/");
+}
+
+export async function reactivateVariant(variantId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: true } });
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+}
+
+const updateVariantSchema = z.object({
+  variantId: z.string().min(1),
+  label: z.string().min(1),
+  price: z.coerce.number().int().min(1),
+});
+
+export async function updateVariant(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
+  const parsed = updateVariantSchema.safeParse({
+    variantId: formData.get("variantId"),
+    label: formData.get("label"),
+    price: formData.get("price"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+  const { variantId, ...rest } = parsed.data;
+  await prisma.productVariant.update({ where: { id: variantId }, data: rest });
+  revalidatePath("/admin/products");
+  revalidatePath("/");
+  return {};
 }

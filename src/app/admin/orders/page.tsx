@@ -54,6 +54,7 @@ export default async function AdminOrdersPage({
           <option value="AWAITING_CONFIRMATION">Menunggu Konfirmasi</option>
           <option value="PAID">Sudah Dibayar</option>
           <option value="EXPIRED">Kedaluwarsa</option>
+          <option value="CANCELLED">Dibatalkan</option>
         </select>
         <button type="submit" className="rounded bg-[#124B23] px-4 py-2 text-white">Filter</button>
         <a

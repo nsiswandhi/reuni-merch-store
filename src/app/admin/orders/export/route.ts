@@ -9,6 +9,7 @@ const STATUS_LABELS: Record<string, string> = {
   AWAITING_CONFIRMATION: "Menunggu Konfirmasi",
   PAID: "Sudah Dibayar",
   EXPIRED: "Kedaluwarsa",
+  CANCELLED: "Dibatalkan",
 };
 
 export async function GET(request: NextRequest) {

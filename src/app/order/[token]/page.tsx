@@ -11,6 +11,7 @@ const STATUS_LABELS: Record<string, string> = {
   AWAITING_CONFIRMATION: "Menunggu Konfirmasi Admin",
   PAID: "Sudah Dibayar",
   EXPIRED: "Kedaluwarsa",
+  CANCELLED: "Dibatalkan",
 };
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ token: string }> }) {

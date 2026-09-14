@@ -1,4 +1,4 @@
-export type OrderStatus = "PENDING_PAYMENT" | "AWAITING_CONFIRMATION" | "PAID" | "EXPIRED";
+export type OrderStatus = "PENDING_PAYMENT" | "AWAITING_CONFIRMATION" | "PAID" | "EXPIRED" | "CANCELLED";
 
 export function canUploadProof(status: OrderStatus): boolean {
   return status === "PENDING_PAYMENT";
@@ -10,6 +10,13 @@ export function canConfirmPayment(status: OrderStatus): boolean {
 
 export function canRejectProof(status: OrderStatus): boolean {
   return status === "AWAITING_CONFIRMATION";
+}
+
+// Cancelling releases any stock the order reserved at checkout, so it's only
+// allowed before payment is confirmed — an already-PAID order represents a
+// real, fulfilled transaction and isn't cancellable from here.
+export function canCancelOrder(status: OrderStatus): boolean {
+  return status === "PENDING_PAYMENT" || status === "AWAITING_CONFIRMATION";
 }
 
 const HOUR_MS = 60 * 60 * 1000;

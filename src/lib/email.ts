@@ -130,6 +130,21 @@ export async function sendReminderEmail(orderId: string): Promise<void> {
   }
 }
 
+export async function sendOrderCancelledEmail(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+
+    await safeSend({
+      to: order.buyerEmail,
+      subject: `Order dibatalkan: ${order.orderNumber}`,
+      html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sudah dibatalkan oleh admin.</p>
+             <p>Kalau ini tidak sesuai harapan kamu, silakan hubungi panitia.</p>`,
+    });
+  } catch (error) {
+    console.error("sendOrderCancelledEmail failed:", error);
+  }
+}
+
 export async function sendExpiredEmail(orderId: string): Promise<void> {
   try {
     const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });

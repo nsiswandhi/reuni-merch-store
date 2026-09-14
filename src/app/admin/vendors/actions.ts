@@ -72,3 +72,55 @@ export async function resetVendorPassword(formData: FormData): Promise<{ error?:
   revalidatePath("/admin/vendors");
   return {};
 }
+
+const updateVendorSchema = z.object({
+  vendorId: z.string().min(1),
+  brandName: z.string().min(1),
+  ownerName: z.string().min(1),
+  angkatan: z.string().min(1),
+  email: z.string().email(),
+});
+
+export async function updateVendor(formData: FormData): Promise<{ error?: string }> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Tidak diizinkan." };
+  }
+
+  const parsed = updateVendorSchema.safeParse({
+    vendorId: formData.get("vendorId"),
+    brandName: formData.get("brandName"),
+    ownerName: formData.get("ownerName"),
+    angkatan: formData.get("angkatan"),
+    email: formData.get("email"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  }
+
+  const { vendorId, ...rest } = parsed.data;
+
+  // Email doubles as the vendor's login username, so it must stay unique —
+  // check against every OTHER vendor, not just any existing row.
+  const existing = await prisma.vendor.findUnique({ where: { email: rest.email } });
+  if (existing && existing.id !== vendorId) {
+    return { error: "Email vendor sudah dipakai." };
+  }
+
+  await prisma.vendor.update({ where: { id: vendorId }, data: rest });
+  revalidatePath("/admin/vendors");
+  return {};
+}
+
+export async function deactivateVendor(vendorId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.vendor.update({ where: { id: vendorId }, data: { isActive: false } });
+  revalidatePath("/admin/vendors");
+}
+
+export async function reactivateVendor(vendorId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.vendor.update({ where: { id: vendorId }, data: { isActive: true } });
+  revalidatePath("/admin/vendors");
+}

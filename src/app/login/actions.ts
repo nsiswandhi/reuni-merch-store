@@ -42,7 +42,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   const vendor = await prisma.vendor.findUnique({ where: { email } });
-  if (vendor && (await verifyPassword(password, vendor.passwordHash))) {
+  if (vendor && vendor.isActive && (await verifyPassword(password, vendor.passwordHash))) {
     const token = await createSessionToken({ sub: vendor.id, role: "VENDOR", vendorId: vendor.id });
     (await cookies()).set("session", token, {
       httpOnly: true,
