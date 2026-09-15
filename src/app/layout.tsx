@@ -5,6 +5,7 @@ import "@fontsource/montserrat/600.css";
 import "@fontsource/montserrat/700.css";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Merchandise Reuni Akbar InVnity 2026",
@@ -14,9 +15,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className="h-full antialiased">
-      <body className="min-h-full flex flex-col pb-14 font-sans">
+      <body className="min-h-full flex flex-col font-sans">
         <SiteHeader />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
