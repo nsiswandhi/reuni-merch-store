@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getActiveProducts, getDisplayPriceRange, sortProducts, parseProductSort } from "@/lib/products";
 import { SortSelect } from "./sort-select";
+import { OwnerInfo } from "@/components/owner-info";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -53,6 +54,11 @@ export default async function KatalogPage({
                   <p className="text-sm text-[#124B23]">
                     {min === max ? formatRupiah(min) : `Mulai dari ${formatRupiah(min)}`}
                   </p>
+                  <OwnerInfo
+                    ownerName={product.vendor.ownerName}
+                    angkatan={product.vendor.angkatan}
+                    className="mt-1 text-[10px]"
+                  />
                 </div>
               </Link>
             );

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getProductBySlug, getDisplayPriceRange } from "@/lib/products";
 import { getProductAvailability } from "@/lib/availability";
 import { getPreorderProgress } from "@/lib/preorder";
+import { OwnerInfo } from "@/components/owner-info";
 import { AddToCartForm } from "./add-to-cart-form";
 
 function formatRupiah(amount: number): string {
@@ -60,6 +61,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         maxQty={product.availabilityMode === "STOCK" ? availability.remainingStock : undefined}
         isPreorder={product.isPreorder}
         preorderProgress={preorderProgress}
+      />
+      <OwnerInfo
+        ownerName={product.vendor.ownerName}
+        angkatan={product.vendor.angkatan}
+        className="mt-3 text-sm"
+        iconClassName="h-4 w-4 shrink-0"
       />
     </main>
   );
