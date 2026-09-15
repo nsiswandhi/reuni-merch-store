@@ -37,6 +37,10 @@ export function getCart(): CartItem[] {
 
 function saveCart(items: CartItem[]): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  // localStorage's own "storage" event only fires in OTHER tabs, not this
+  // one — dispatched separately so same-tab listeners (e.g. the header's
+  // cart badge) can react immediately after an add/update/remove here.
+  window.dispatchEvent(new Event("cart-updated"));
 }
 
 export function addToCart(newItem: CartItem): CartItem[] {
