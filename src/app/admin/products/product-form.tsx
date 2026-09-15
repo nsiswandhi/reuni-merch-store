@@ -381,13 +381,11 @@ export function ReactivateVariantForm({ variantId }: { variantId: string }) {
 // component never needs to branch on an isActive flag of its own.
 export function ProductCard({
   product,
-  vendorName,
   vendors,
   activeVariants,
   inactiveVariants,
 }: {
   product: ProductFields;
-  vendorName: string;
   vendors: { id: string; brandName: string }[];
   activeVariants: VariantFields[];
   inactiveVariants: VariantFields[];
@@ -397,7 +395,6 @@ export function ProductCard({
       <div className="flex items-center justify-between">
         <div>
           <p className="font-semibold">{product.name}</p>
-          <p className="text-sm text-gray-500">{vendorName}</p>
           <p className="text-xs text-gray-500">
             {product.availabilityMode === "ALWAYS" && "Selalu tersedia"}
             {product.availabilityMode === "LAST_ORDER_DATE" &&
@@ -422,26 +419,32 @@ export function ProductCard({
         </div>
       </div>
 
-      <ul className="mt-2 text-sm">
-        {activeVariants.map((v) => (
-          <VariantRow key={v.id} variant={v} />
-        ))}
-      </ul>
-      <NewVariantForm productId={product.id} />
+      <details className="mt-2">
+        <summary className="cursor-pointer select-none text-sm text-gray-600">
+          Varian ({activeVariants.length}
+          {inactiveVariants.length > 0 ? `, ${inactiveVariants.length} nonaktif` : ""})
+        </summary>
+        <ul className="mt-2 text-sm">
+          {activeVariants.map((v) => (
+            <VariantRow key={v.id} variant={v} />
+          ))}
+        </ul>
+        <NewVariantForm productId={product.id} />
 
-      {inactiveVariants.length > 0 && (
-        <div className="mt-3">
-          <p className="mb-1 text-xs font-semibold text-gray-500">Varian Nonaktif</p>
-          <ul className="text-sm">
-            {inactiveVariants.map((v) => (
-              <li key={v.id} className="flex items-center justify-between border-b py-1 text-gray-400">
-                <span>{v.label} — Rp{v.price.toLocaleString("id-ID")}</span>
-                <ReactivateVariantForm variantId={v.id} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {inactiveVariants.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-1 text-xs font-semibold text-gray-500">Varian Nonaktif</p>
+            <ul className="text-sm">
+              {inactiveVariants.map((v) => (
+                <li key={v.id} className="flex items-center justify-between border-b py-1 text-gray-400">
+                  <span>{v.label} — Rp{v.price.toLocaleString("id-ID")}</span>
+                  <ReactivateVariantForm variantId={v.id} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </details>
     </div>
   );
 }

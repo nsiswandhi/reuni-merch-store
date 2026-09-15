@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getActiveProducts, getDisplayPriceRange, sortProducts, parseProductSort } from "@/lib/products";
 import { SortSelect } from "./sort-select";
+import { VendorFilterSelect } from "./vendor-filter-select";
 import { OwnerInfo } from "@/components/owner-info";
 
 function formatRupiah(amount: number): string {
@@ -11,20 +12,34 @@ function formatRupiah(amount: number): string {
 export default async function KatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; vendor?: string }>;
 }) {
-  const { sort } = await searchParams;
+  const { sort, vendor } = await searchParams;
   const sortOption = parseProductSort(sort);
-  const products = sortProducts(await getActiveProducts(), sortOption);
+  const allProducts = await getActiveProducts();
+
+  // Distinct vendors that actually have an active product, alphabetized —
+  // built from the products themselves rather than a separate query so the
+  // filter never offers a vendor with nothing to show.
+  const vendors = [...new Map(allProducts.map((p) => [p.vendor.id, { id: p.vendor.id, brandName: p.vendor.brandName }])).values()].sort(
+    (a, b) => a.brandName.localeCompare(b.brandName, "id")
+  );
+  const vendorFiltered = vendor ? allProducts.filter((p) => p.vendor.id === vendor) : allProducts;
+  const products = sortProducts(vendorFiltered, sortOption);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-[Bebas_Neue] text-4xl text-[#124B23]">Merchandise Reuni Akbar InVnity 2026</h1>
-        {products.length > 0 && <SortSelect current={sortOption} />}
+        {allProducts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <VendorFilterSelect vendors={vendors} current={vendor ?? ""} />
+            <SortSelect current={sortOption} />
+          </div>
+        )}
       </div>
       {products.length === 0 ? (
-        <p className="text-gray-500">Belum ada produk tersedia.</p>
+        <p className="text-gray-500">{vendor ? "Belum ada produk dari vendor ini." : "Belum ada produk tersedia."}</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {products.map((product) => {

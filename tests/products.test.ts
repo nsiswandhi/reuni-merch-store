@@ -17,16 +17,17 @@ const products: FakeProduct[] = [
 describe("parseProductSort", () => {
   it("accepts a recognized sort value", () => {
     expect(parseProductSort("harga-asc")).toBe("harga-asc");
-    expect(parseProductSort("vendor")).toBe("vendor");
+    expect(parseProductSort("nama")).toBe("nama");
   });
 
-  it("defaults to terbaru for missing or unrecognized values", () => {
+  it("defaults to terbaru for missing or unrecognized values (including the removed 'vendor' sort)", () => {
     expect(parseProductSort(undefined)).toBe("terbaru");
     expect(parseProductSort("not-a-real-option")).toBe("terbaru");
+    expect(parseProductSort("vendor")).toBe("terbaru");
   });
 
   it("takes the first value when given an array (repeated query param)", () => {
-    expect(parseProductSort(["nama", "vendor"])).toBe("nama");
+    expect(parseProductSort(["nama", "harga-asc"])).toBe("nama");
   });
 });
 
@@ -39,11 +40,6 @@ describe("sortProducts", () => {
   it("sorts by lowest display price descending", () => {
     const result = sortProducts(products, "harga-desc");
     expect(result.map((p) => p.name)).toEqual(["Kaos", "Bucket Hat", "Tumbler"]);
-  });
-
-  it("sorts by vendor brand name A-Z", () => {
-    const result = sortProducts(products, "vendor");
-    expect(result.map((p) => p.vendor.brandName)).toEqual(["Alpha Craft", "Mitra Store", "Zeta Merch"]);
   });
 
   it("sorts by product name A-Z", () => {

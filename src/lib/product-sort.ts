@@ -14,13 +14,12 @@ export function getDisplayPriceRange(product: {
   return { min: Math.min(...prices), max: Math.max(...prices) };
 }
 
-export type ProductSortOption = "terbaru" | "harga-asc" | "harga-desc" | "vendor" | "nama";
+export type ProductSortOption = "terbaru" | "harga-asc" | "harga-desc" | "nama";
 
 export const PRODUCT_SORT_OPTIONS: { value: ProductSortOption; label: string }[] = [
   { value: "terbaru", label: "Terbaru" },
   { value: "harga-asc", label: "Harga: Rendah ke Tinggi" },
   { value: "harga-desc", label: "Harga: Tinggi ke Rendah" },
-  { value: "vendor", label: "Nama Vendor (A-Z)" },
   { value: "nama", label: "Nama Produk (A-Z)" },
 ];
 
@@ -37,7 +36,7 @@ export function parseProductSort(value: string | string[] | undefined): ProductS
 // "terbaru" is a no-op here because getActiveProducts already orders by
 // createdAt desc at the database level.
 export function sortProducts<
-  T extends { name: string; basePrice: number; variants: { price: number }[]; vendor: { brandName: string } },
+  T extends { name: string; basePrice: number; variants: { price: number }[] },
 >(products: T[], sort: ProductSortOption): T[] {
   const sorted = [...products];
   switch (sort) {
@@ -45,8 +44,6 @@ export function sortProducts<
       return sorted.sort((a, b) => getDisplayPriceRange(a).min - getDisplayPriceRange(b).min);
     case "harga-desc":
       return sorted.sort((a, b) => getDisplayPriceRange(b).min - getDisplayPriceRange(a).min);
-    case "vendor":
-      return sorted.sort((a, b) => a.vendor.brandName.localeCompare(b.vendor.brandName, "id"));
     case "nama":
       return sorted.sort((a, b) => a.name.localeCompare(b.name, "id"));
     case "terbaru":
