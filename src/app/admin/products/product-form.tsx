@@ -14,55 +14,99 @@ import {
 
 type AvailabilityMode = "ALWAYS" | "LAST_ORDER_DATE" | "STOCK";
 
-// Shared by NewProductForm and EditProductForm, same rationale as
-// AvailabilityFields below. isPreorder is handled as a plain checkbox
-// (presence in FormData means checked, like Vendor.allowsPickup).
-function PreorderFields({
+// Shared by NewProductForm and EditProductForm: makes "produk biasa vs
+// preorder" an explicit either/or choice, so only one of AvailabilityFields
+// / PreorderFields is ever shown (and submitted) for a given product. This
+// resolves a real bug: a product could previously be both "Preorder" AND
+// have a Last Order Date / Stok set, even though a preorder round is
+// deliberately open-ended (no deadline) — the stale availability setting
+// could silently cut off preorder ordering before the quota was met.
+function ProductTypeSelector({
   isPreorder,
-  onIsPreorderChange,
-  defaultPreorderMinQty,
-  preorderReservedQty,
+  onChange,
 }: {
   isPreorder: boolean;
-  onIsPreorderChange: (checked: boolean) => void;
+  onChange: (isPreorder: boolean) => void;
+}) {
+  return (
+    <fieldset className="rounded border border-gray-200 p-3">
+      <legend className="px-1 text-sm font-semibold">Tipe Produk</legend>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name="productType"
+          value="REGULAR"
+          checked={!isPreorder}
+          onChange={() => onChange(false)}
+        />
+        Produk Biasa
+      </label>
+      <label className="mt-1 flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name="productType"
+          value="PREORDER"
+          checked={isPreorder}
+          onChange={() => onChange(true)}
+        />
+        Preorder (pesan dulu, produksi setelah kuota terpenuhi)
+      </label>
+    </fieldset>
+  );
+}
+
+// Shown only when ProductTypeSelector is set to Preorder — see there for why
+// this and AvailabilityFields are mutually exclusive.
+function PreorderFields({
+  defaultPreorderMinQty,
+  defaultPreorderNote,
+  preorderReservedQty,
+}: {
   defaultPreorderMinQty?: number | string;
+  defaultPreorderNote?: string;
   preorderReservedQty?: number;
 }) {
   return (
     <div className="mt-2 rounded border border-gray-200 p-3">
-      <label className="flex items-center gap-2 text-sm font-semibold">
-        <input
-          type="checkbox"
-          name="isPreorder"
-          checked={isPreorder}
-          onChange={(e) => onIsPreorderChange(e.target.checked)}
-        />
-        Preorder (pesan dulu, produksi setelah kuota terpenuhi)
+      <label htmlFor="preorderMinQty" className="mb-1 block text-sm font-semibold">
+        Kuota Minimum
       </label>
-      {isPreorder && (
-        <div className="mt-2">
-          <input
-            name="preorderMinQty"
-            type="number"
-            min={1}
-            placeholder="Kuota minimum (mis. 36)"
-            required
-            defaultValue={defaultPreorderMinQty}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-          />
-          {preorderReservedQty !== undefined && (
-            <p className="mt-1 text-xs text-gray-500">
-              Progress gelombang berjalan: {preorderReservedQty} pcs sudah dipesan.
-            </p>
-          )}
-        </div>
+      <input
+        id="preorderMinQty"
+        name="preorderMinQty"
+        type="number"
+        min={1}
+        placeholder="Kuota minimum (mis. 36)"
+        required
+        defaultValue={defaultPreorderMinQty}
+        className="w-full rounded border border-gray-300 px-3 py-2"
+      />
+      {preorderReservedQty !== undefined && (
+        <p className="mt-1 text-xs text-gray-500">
+          Progress gelombang berjalan: {preorderReservedQty} pcs sudah dipesan.
+        </p>
       )}
+      <label htmlFor="preorderNote" className="mt-3 mb-1 block text-sm font-semibold">
+        Catatan Preorder
+      </label>
+      <textarea
+        id="preorderNote"
+        name="preorderNote"
+        placeholder="Mis. Produksi 1-2 minggu, estimasi kirim awal November"
+        defaultValue={defaultPreorderNote}
+        rows={2}
+        className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+      />
+      <p className="mt-1 text-xs text-gray-500">
+        Catatan ini ditampilkan ke pembeli di dekat info kuota preorder.
+      </p>
     </div>
   );
 }
 
 // Shared by NewProductForm and EditProductForm so the two forms can't drift
-// out of sync on what "availability" looks like as a form field.
+// out of sync on what "availability" looks like as a form field. Only
+// rendered for non-preorder products — see ProductTypeSelector above.
 function AvailabilityFields({
   availabilityMode,
   onAvailabilityModeChange,
@@ -139,8 +183,12 @@ export function NewProductForm({ vendors }: { vendors: { id: string; brandName: 
         className="cursor-pointer rounded border border-gray-300 px-3 py-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-[#124B23] file:px-3 file:py-1.5 file:font-medium file:text-white"
       />
 
-      <AvailabilityFields availabilityMode={availabilityMode} onAvailabilityModeChange={setAvailabilityMode} />
-      <PreorderFields isPreorder={isPreorder} onIsPreorderChange={setIsPreorder} />
+      <ProductTypeSelector isPreorder={isPreorder} onChange={setIsPreorder} />
+      {isPreorder ? (
+        <PreorderFields />
+      ) : (
+        <AvailabilityFields availabilityMode={availabilityMode} onAvailabilityModeChange={setAvailabilityMode} />
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white">Simpan Produk</button>
@@ -160,6 +208,7 @@ interface ProductFields {
   isPreorder: boolean;
   preorderMinQty: number | null;
   preorderReservedQty: number;
+  preorderNote: string | null;
 }
 
 export function EditProductForm({
@@ -211,18 +260,21 @@ export function EditProductForm({
       />
       <p className="text-xs text-gray-500">Kosongkan gambar jika tidak ingin menggantinya.</p>
 
-      <AvailabilityFields
-        availabilityMode={availabilityMode}
-        onAvailabilityModeChange={setAvailabilityMode}
-        defaultLastOrderAt={product.lastOrderAt ?? undefined}
-        defaultStock={product.stock ?? undefined}
-      />
-      <PreorderFields
-        isPreorder={isPreorder}
-        onIsPreorderChange={setIsPreorder}
-        defaultPreorderMinQty={product.preorderMinQty ?? undefined}
-        preorderReservedQty={product.isPreorder ? product.preorderReservedQty : undefined}
-      />
+      <ProductTypeSelector isPreorder={isPreorder} onChange={setIsPreorder} />
+      {isPreorder ? (
+        <PreorderFields
+          defaultPreorderMinQty={product.preorderMinQty ?? undefined}
+          defaultPreorderNote={product.preorderNote ?? undefined}
+          preorderReservedQty={product.isPreorder ? product.preorderReservedQty : undefined}
+        />
+      ) : (
+        <AvailabilityFields
+          availabilityMode={availabilityMode}
+          onAvailabilityModeChange={setAvailabilityMode}
+          defaultLastOrderAt={product.lastOrderAt ?? undefined}
+          defaultStock={product.stock ?? undefined}
+        />
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
@@ -354,9 +406,12 @@ export function ProductCard({
             {product.availabilityMode === "STOCK" && `Stok: ${product.stock ?? 0}`}
           </p>
           {product.isPreorder && (
-            <p className="text-xs font-medium text-[#124B23]">
-              Preorder — {product.preorderReservedQty} dari minimal {product.preorderMinQty} pcs
-            </p>
+            <div className="text-xs font-medium text-[#124B23]">
+              <p>
+                Preorder — {product.preorderReservedQty} dari minimal {product.preorderMinQty} pcs
+              </p>
+              {product.preorderNote && <p className="font-normal text-gray-500">{product.preorderNote}</p>}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3">

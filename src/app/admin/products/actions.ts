@@ -24,6 +24,7 @@ const productBaseFields = z.object({
   stock: z.string().optional(),
   isPreorder: z.boolean().default(false),
   preorderMinQty: z.string().optional(),
+  preorderNote: z.string().optional(),
 });
 
 // Shared by create and update — one place defining what "valid availability
@@ -89,8 +90,12 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
     availabilityMode: formData.get("availabilityMode") || undefined,
     lastOrderAt: formData.get("lastOrderAt") || undefined,
     stock: formData.get("stock") || undefined,
-    isPreorder: formData.get("isPreorder") === "on",
+    // Derived from the ProductTypeSelector radio group (productType form-
+    // wide), not a standalone checkbox — see product-form.tsx for why
+    // regular-vs-preorder is now an explicit either/or choice.
+    isPreorder: formData.get("productType") === "PREORDER",
     preorderMinQty: formData.get("preorderMinQty") || undefined,
+    preorderNote: formData.get("preorderNote") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
@@ -114,7 +119,7 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
     slug = `${baseSlug}-${suffix++}`;
   }
 
-  const { availabilityMode, lastOrderAt, stock, isPreorder, preorderMinQty, ...productData } = parsed.data;
+  const { availabilityMode, lastOrderAt, stock, isPreorder, preorderMinQty, preorderNote, ...productData } = parsed.data;
 
   await prisma.product.create({
     data: {
@@ -128,6 +133,7 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
       stock: availabilityMode === "STOCK" ? Number(stock) : null,
       isPreorder,
       preorderMinQty: isPreorder ? Number(preorderMinQty) : null,
+      preorderNote: isPreorder ? (preorderNote?.trim() || null) : null,
     },
   });
 
@@ -152,8 +158,9 @@ export async function updateProduct(formData: FormData): Promise<{ error?: strin
     availabilityMode: formData.get("availabilityMode") || undefined,
     lastOrderAt: formData.get("lastOrderAt") || undefined,
     stock: formData.get("stock") || undefined,
-    isPreorder: formData.get("isPreorder") === "on",
+    isPreorder: formData.get("productType") === "PREORDER",
     preorderMinQty: formData.get("preorderMinQty") || undefined,
+    preorderNote: formData.get("preorderNote") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
@@ -171,7 +178,7 @@ export async function updateProduct(formData: FormData): Promise<{ error?: strin
     imageUrl = await uploadBufferToBlobs(`product-images/${Date.now()}-${imageFile.name}`, buffer, imageFile.type);
   }
 
-  const { productId, availabilityMode, lastOrderAt, stock, isPreorder, preorderMinQty, ...productData } = parsed.data;
+  const { productId, availabilityMode, lastOrderAt, stock, isPreorder, preorderMinQty, preorderNote, ...productData } = parsed.data;
 
   await prisma.product.update({
     where: { id: productId },
@@ -183,6 +190,7 @@ export async function updateProduct(formData: FormData): Promise<{ error?: strin
       stock: availabilityMode === "STOCK" ? Number(stock) : null,
       isPreorder,
       preorderMinQty: isPreorder ? Number(preorderMinQty) : null,
+      preorderNote: isPreorder ? (preorderNote?.trim() || null) : null,
     },
   });
 

@@ -34,6 +34,7 @@ export default async function AdminProductsPage() {
               isPreorder: product.isPreorder,
               preorderMinQty: product.preorderMinQty,
               preorderReservedQty: product.preorderReservedQty,
+              preorderNote: product.preorderNote,
             }}
             vendorName={product.vendor.brandName}
             vendors={vendorOptions}

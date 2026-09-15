@@ -85,6 +85,10 @@ model Product {
   isPreorder           Boolean  @default(false)
   preorderMinQty       Int?
   preorderReservedQty  Int      @default(0)
+  // Free-text admin note shown to buyers next to preorder quota progress
+  // (product detail page, order detail page) — e.g. production lead time
+  // and estimated ship date. Optional; null renders nothing.
+  preorderNote         String?
   createdAt   DateTime  @default(now())
   variants    ProductVariant[]
   orderItems  OrderItem[]

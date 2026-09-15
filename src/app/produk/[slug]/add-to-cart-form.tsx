@@ -28,6 +28,7 @@ export function AddToCartForm({
   maxQty,
   isPreorder = false,
   preorderProgress,
+  preorderNote,
 }: {
   productId: string;
   productSlug: string;
@@ -41,6 +42,7 @@ export function AddToCartForm({
   maxQty?: number;
   isPreorder?: boolean;
   preorderProgress?: { reserved: number; min: number } | null;
+  preorderNote?: string | null;
 }) {
   const router = useRouter();
   const [variantId, setVariantId] = useState<string>(variants[0]?.id ?? "");
@@ -109,9 +111,12 @@ export function AddToCartForm({
         <p className="text-xs text-gray-500">Produk ini hanya bisa dikirim (vendor tidak melayani ambil di venue).</p>
       )}
       {isPreorder && preorderProgress && (
-        <p className="text-xs text-gray-500">
-          Sudah dipesan: {preorderProgress.reserved} dari minimal {preorderProgress.min} pcs. Belum perlu bayar — kami kirim email begitu kuota terpenuhi.
-        </p>
+        <div className="text-xs text-gray-500">
+          <p>
+            Sudah dipesan: {preorderProgress.reserved} dari minimal {preorderProgress.min} pcs. Belum perlu bayar — kami kirim email begitu kuota terpenuhi.
+          </p>
+          {preorderNote && <p className="mt-1">{preorderNote}</p>}
+        </div>
       )}
       {cartError && <p className="text-sm text-red-600">{cartError}</p>}
       <button

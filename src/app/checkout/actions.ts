@@ -53,19 +53,27 @@ export async function createOrder(
   });
   const productById = new Map(products.map((p) => [p.id, p]));
 
-  // Same rule enforced client-side in checkout/page.tsx, re-checked here
-  // since the client's choice can never be trusted: if any item's vendor
-  // can't hand off in person, the whole order must be shipped.
-  if (deliveryMethod === "PICKUP" && products.some((p) => !p.vendor.allowsPickup)) {
-    return { error: "Salah satu vendor di pesananmu hanya melayani pengiriman — silakan pilih Dikirim." };
-  }
-
   // Same rule enforced client-side in cart.ts's addToCart (CartConflictError)
   // — re-checked here since cart contents are never trusted. A preorder
   // order can't mix with regular items, and can only be tied to one
   // product's quota, since the whole order transitions RESERVED ->
   // PENDING_PAYMENT together when that one product's quota is met.
   const isPreorderOrder = products.some((p) => p.isPreorder);
+
+  // Same rules enforced client-side in checkout/page.tsx, re-checked here
+  // since the client's choice can never be trusted: a preorder order is
+  // always shipped (production takes 1-2 weeks, no same-day pickup to
+  // offer), and otherwise if any item's vendor can't hand off in person,
+  // the whole order must be shipped.
+  if (deliveryMethod === "PICKUP") {
+    if (isPreorderOrder) {
+      return { error: "Pesanan preorder hanya bisa dikirim — silakan pilih Dikirim." };
+    }
+    if (products.some((p) => !p.vendor.allowsPickup)) {
+      return { error: "Salah satu vendor di pesananmu hanya melayani pengiriman — silakan pilih Dikirim." };
+    }
+  }
+
   if (isPreorderOrder) {
     if (products.some((p) => !p.isPreorder)) {
       return { error: "Pesanan preorder tidak bisa dicampur dengan produk reguler." };

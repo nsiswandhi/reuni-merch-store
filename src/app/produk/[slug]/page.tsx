@@ -61,6 +61,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         maxQty={product.availabilityMode === "STOCK" ? availability.remainingStock : undefined}
         isPreorder={product.isPreorder}
         preorderProgress={preorderProgress}
+        preorderNote={product.preorderNote}
       />
       <OwnerInfo
         ownerName={product.vendor.ownerName}

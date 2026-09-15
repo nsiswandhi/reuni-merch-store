@@ -18,10 +18,14 @@ export default function CheckoutPage() {
   const [deliveryMethodChoice, setDeliveryMethodChoice] = useState<"PICKUP" | "SHIPPING">("PICKUP");
   const [state, formAction, pending] = useActionState(createOrder, initialState);
 
+  const isPreorder = items.some((i) => i.isPreorder);
   // A cart item from before this feature shipped has no vendorAllowsPickup
   // in its stored JSON — treat that as "allowed" (today's behavior) rather
-  // than silently blocking pickup for pre-existing carts.
-  const mustShip = items.some((i) => i.vendorAllowsPickup === false);
+  // than silently blocking pickup for pre-existing carts. Preorder orders
+  // are always shipped: production takes 1-2 weeks, so there's no same-day
+  // pickup to offer regardless of the vendor's normal allowsPickup setting.
+  const vendorForcesShipping = items.some((i) => i.vendorAllowsPickup === false);
+  const mustShip = isPreorder || vendorForcesShipping;
   // Derived, not synced via effect: when the cart forces shipping, this
   // overrides whatever the buyer had picked before that became true.
   const deliveryMethod = mustShip ? "SHIPPING" : deliveryMethodChoice;
@@ -45,7 +49,6 @@ export default function CheckoutPage() {
   }, [state.orderToken, router]);
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
-  const isPreorder = items.some((i) => i.isPreorder);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -94,7 +97,9 @@ export default function CheckoutPage() {
         </fieldset>
         {mustShip && (
           <p className="text-sm text-gray-500">
-            Salah satu vendor di keranjangmu hanya melayani pengiriman, jadi pesanan ini otomatis dikirim.
+            {isPreorder
+              ? "Preorder diproduksi dulu lalu dikirim, jadi pesanan ini otomatis dikirim."
+              : "Salah satu vendor di keranjangmu hanya melayani pengiriman, jadi pesanan ini otomatis dikirim."}
           </p>
         )}
 

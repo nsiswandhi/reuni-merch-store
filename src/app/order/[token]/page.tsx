@@ -49,6 +49,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ to
               Progress: {order.items[0].product.preorderReservedQty} dari minimal {order.items[0].product.preorderMinQty} pcs.
             </p>
           )}
+          {order.items[0]?.product?.preorderNote && (
+            <p className="mt-1 text-sm text-gray-500">{order.items[0].product.preorderNote}</p>
+          )}
           <p className="mt-2 text-sm text-gray-500">
             Begitu kuota minimum tercapai, kami kirim email berisi instruksi pembayaran (batas waktu 3 hari).
           </p>
