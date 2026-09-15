@@ -1,5 +1,27 @@
 export type OrderStatus = "RESERVED" | "PENDING_PAYMENT" | "AWAITING_CONFIRMATION" | "PAID" | "EXPIRED" | "CANCELLED";
 
+export const ORDER_STATUSES: readonly OrderStatus[] = [
+  "RESERVED",
+  "PENDING_PAYMENT",
+  "AWAITING_CONFIRMATION",
+  "PAID",
+  "EXPIRED",
+  "CANCELLED",
+];
+
+// Validates a raw URL query-string value against the real enum before it's
+// used in a Prisma `where` filter, instead of trusting an unchecked
+// `as Prisma.EnumOrderStatusFilter["equals"]` cast. An unrecognized value
+// (typo'd or tampered with) is treated as "no filter" rather than thrown —
+// this only ever narrows an admin list/export query, so failing open to
+// "show everything" is safe and simpler than surfacing a 400.
+export function parseOrderStatusFilter(value: string | undefined): OrderStatus | undefined {
+  if (value && (ORDER_STATUSES as string[]).includes(value)) {
+    return value as OrderStatus;
+  }
+  return undefined;
+}
+
 export function canUploadProof(status: OrderStatus): boolean {
   return status === "PENDING_PAYMENT";
 }

@@ -12,7 +12,10 @@ export const checkoutFormSchema = z.object({
       z.object({
         productId: z.string().min(1),
         variantId: z.string().nullable(),
-        qty: z.number().int().positive(),
+        // Upper bound guards against an absurd/abusive quantity being
+        // submitted directly to the server action (bypassing any UI limit) —
+        // no real merch order needs more than 100 of one line item.
+        qty: z.number().int().positive().max(100, "Jumlah maksimal 100 per item"),
       })
     )
     .min(1, "Keranjang tidak boleh kosong"),

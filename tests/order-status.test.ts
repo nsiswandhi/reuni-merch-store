@@ -5,6 +5,7 @@ import {
   canRejectProof,
   canCancelOrder,
   getReminderAction,
+  parseOrderStatusFilter,
 } from "../src/lib/order-status";
 
 describe("status guards", () => {
@@ -86,5 +87,23 @@ describe("getReminderAction", () => {
   it("expires at exactly 72 hours", () => {
     const now = new Date("2026-01-04T00:00:00Z");
     expect(getReminderAction(createdAt, 2, now)).toBe("EXPIRE");
+  });
+});
+
+describe("parseOrderStatusFilter", () => {
+  it("accepts every real status value", () => {
+    expect(parseOrderStatusFilter("RESERVED")).toBe("RESERVED");
+    expect(parseOrderStatusFilter("PENDING_PAYMENT")).toBe("PENDING_PAYMENT");
+    expect(parseOrderStatusFilter("AWAITING_CONFIRMATION")).toBe("AWAITING_CONFIRMATION");
+    expect(parseOrderStatusFilter("PAID")).toBe("PAID");
+    expect(parseOrderStatusFilter("EXPIRED")).toBe("EXPIRED");
+    expect(parseOrderStatusFilter("CANCELLED")).toBe("CANCELLED");
+  });
+
+  it("returns undefined for an unrecognized or empty value instead of throwing", () => {
+    expect(parseOrderStatusFilter("paid")).toBeUndefined(); // wrong case
+    expect(parseOrderStatusFilter("DROP TABLE orders")).toBeUndefined();
+    expect(parseOrderStatusFilter("")).toBeUndefined();
+    expect(parseOrderStatusFilter(undefined)).toBeUndefined();
   });
 });

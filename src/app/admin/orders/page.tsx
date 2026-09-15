@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { parseOrderStatusFilter } from "@/lib/order-status";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -20,8 +21,9 @@ export default async function AdminOrdersPage({
       { buyerName: { contains: q, mode: "insensitive" } },
     ];
   }
-  if (status) {
-    where.status = status as Prisma.EnumOrderStatusFilter["equals"];
+  const statusFilter = parseOrderStatusFilter(status);
+  if (statusFilter) {
+    where.status = statusFilter;
   }
   if (vendorId) {
     where.items = { some: { vendorId } };

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { canUploadProof } from "@/lib/order-status";
-import { validateUploadFile, uploadBufferToBlobs } from "@/lib/blobs";
+import { validateFileSignature, validateUploadFile, uploadBufferToBlobs } from "@/lib/blobs";
 import { sendProofUploadedNotificationToAdmin } from "@/lib/email";
 
 export async function uploadPaymentProof(orderToken: string, formData: FormData): Promise<{ error?: string }> {
@@ -26,6 +26,10 @@ export async function uploadPaymentProof(orderToken: string, formData: FormData)
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const signatureError = validateFileSignature(buffer, file.type);
+  if (signatureError) {
+    return { error: signatureError };
+  }
   const key = `payment-proofs/${order.id}-${Date.now()}`;
   const url = await uploadBufferToBlobs(key, buffer, file.type);
 

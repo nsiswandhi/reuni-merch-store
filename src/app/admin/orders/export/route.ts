@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/current-user";
+import { parseOrderStatusFilter } from "@/lib/order-status";
 
 const STATUS_LABELS: Record<string, string> = {
   RESERVED: "Menunggu Kuota",
@@ -31,8 +32,9 @@ export async function GET(request: NextRequest) {
       { buyerName: { contains: q, mode: "insensitive" } },
     ];
   }
-  if (status) {
-    orderWhere.status = status as Prisma.EnumOrderStatusFilter["equals"];
+  const statusFilter = parseOrderStatusFilter(status);
+  if (statusFilter) {
+    orderWhere.status = statusFilter;
   }
   if (vendorId) {
     orderWhere.items = { some: { vendorId } };

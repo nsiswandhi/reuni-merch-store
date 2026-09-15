@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/current-user";
-import { uploadBufferToBlobs, validateUploadFile } from "@/lib/blobs";
+import { uploadBufferToBlobs, validateFileSignature, validateUploadFile } from "@/lib/blobs";
 
 const settingsSchema = z.object({
   bankName: z.string().min(1),
@@ -42,6 +42,10 @@ export async function updateSettings(formData: FormData): Promise<{ error?: stri
       return { error: validationError };
     }
     const buffer = Buffer.from(await qrisImage.arrayBuffer());
+    const signatureError = validateFileSignature(buffer, qrisImage.type);
+    if (signatureError) {
+      return { error: signatureError };
+    }
     qrisImageUrl = await uploadBufferToBlobs(`qris/${Date.now()}-${qrisImage.name}`, buffer, qrisImage.type);
   }
 

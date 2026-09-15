@@ -11,7 +11,7 @@ const createVendorSchema = z.object({
   ownerName: z.string().min(1),
   angkatan: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(6, "Password minimal 6 karakter"),
+  password: z.string().min(10, "Password minimal 10 karakter"),
 });
 
 export async function createVendor(formData: FormData): Promise<{ error?: string }> {
@@ -51,7 +51,7 @@ export async function createVendor(formData: FormData): Promise<{ error?: string
 
 const resetPasswordSchema = z.object({
   vendorId: z.string().min(1),
-  newPassword: z.string().min(6, "Password minimal 6 karakter"),
+  newPassword: z.string().min(10, "Password minimal 10 karakter"),
 });
 
 export async function resetVendorPassword(formData: FormData): Promise<{ error?: string }> {

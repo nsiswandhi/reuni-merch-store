@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { uploadBufferToBlobs, validateUploadFile } from "@/lib/blobs";
+import { uploadBufferToBlobs, validateFileSignature, validateUploadFile } from "@/lib/blobs";
 import { requireAdmin } from "@/lib/auth/current-user";
 
 function slugify(name: string): string {
@@ -109,6 +109,10 @@ export async function createProduct(formData: FormData): Promise<{ error?: strin
       return { error: validationError };
     }
     const buffer = Buffer.from(await imageFile.arrayBuffer());
+    const signatureError = validateFileSignature(buffer, imageFile.type);
+    if (signatureError) {
+      return { error: signatureError };
+    }
     imageUrl = await uploadBufferToBlobs(`product-images/${Date.now()}-${imageFile.name}`, buffer, imageFile.type);
   }
 
@@ -175,6 +179,10 @@ export async function updateProduct(formData: FormData): Promise<{ error?: strin
       return { error: validationError };
     }
     const buffer = Buffer.from(await imageFile.arrayBuffer());
+    const signatureError = validateFileSignature(buffer, imageFile.type);
+    if (signatureError) {
+      return { error: signatureError };
+    }
     imageUrl = await uploadBufferToBlobs(`product-images/${Date.now()}-${imageFile.name}`, buffer, imageFile.type);
   }
 

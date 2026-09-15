@@ -10,6 +10,20 @@ function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
 }
 
+// React's JSX auto-escaping doesn't apply to these hand-built HTML strings —
+// buyer-supplied free text (buyerName, from the checkout form) needs manual
+// escaping before it's interpolated into an email's HTML body, otherwise a
+// name like `<img src=x onerror=...>` would execute in mail clients that
+// render HTML.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function siteBase(): string {
   return process.env.SITE_URL ?? "http://localhost:3000";
 }
@@ -53,14 +67,14 @@ export async function sendOrderCreatedEmails(orderId: string): Promise<void> {
     await safeSend({
       to: settings.adminNotificationEmail,
       subject: `Order baru masuk: ${order.orderNumber}`,
-      html: `<p>Order baru dari ${order.buyerName} sebesar ${formatRupiah(order.total)}.</p>
+      html: `<p>Order baru dari ${escapeHtml(order.buyerName)} sebesar ${formatRupiah(order.total)}.</p>
              <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
     });
 
     await safeSend({
       to: order.buyerEmail,
       subject: `Pesanan kamu diterima: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, pesanan kamu sebesar ${formatRupiah(order.total)} sudah diterima.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, pesanan kamu sebesar ${formatRupiah(order.total)} sudah diterima.</p>
              ${paymentInstructionsHtml(settings)}
              <p>Lalu upload bukti transfer di halaman berikut:</p>
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
@@ -84,7 +98,7 @@ export async function sendPreorderReservationEmails(orderId: string): Promise<vo
     await safeSend({
       to: settings.adminNotificationEmail,
       subject: `Reservasi preorder baru: ${order.orderNumber}`,
-      html: `<p>Reservasi preorder baru dari ${order.buyerName} sebesar ${formatRupiah(order.total)}.</p>
+      html: `<p>Reservasi preorder baru dari ${escapeHtml(order.buyerName)} sebesar ${formatRupiah(order.total)}.</p>
              <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
     });
 
@@ -95,7 +109,7 @@ export async function sendPreorderReservationEmails(orderId: string): Promise<vo
     await safeSend({
       to: order.buyerEmail,
       subject: `Reservasi preorder kamu diterima: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, reservasi preorder kamu (${formatRupiah(order.total)}) sudah diterima.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, reservasi preorder kamu (${formatRupiah(order.total)}) sudah diterima.</p>
              <p>Ini <strong>belum perlu dibayar</strong> — kami akan kirim email instruksi pembayaran begitu kuota minimum produk ini terpenuhi.</p>
              ${progressHtml}
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
@@ -116,7 +130,7 @@ export async function sendPreorderQuotaMetEmail(orderId: string): Promise<void> 
     await safeSend({
       to: order.buyerEmail,
       subject: `Kuota preorder terpenuhi, silakan bayar: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, kabar baik — kuota minimum untuk preorder kamu sudah terpenuhi!</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, kabar baik — kuota minimum untuk preorder kamu sudah terpenuhi!</p>
              <p>Silakan selesaikan pembayaran sebesar ${formatRupiah(order.total)} dalam 3 hari ke depan.</p>
              ${paymentInstructionsHtml(settings)}
              <p>Lalu upload bukti transfer di halaman berikut:</p>
@@ -135,7 +149,7 @@ export async function sendProofUploadedNotificationToAdmin(orderId: string): Pro
     await safeSend({
       to: settings.adminNotificationEmail,
       subject: `Bukti transfer baru: ${order.orderNumber}`,
-      html: `<p>Order ${order.orderNumber} dari ${order.buyerName} sudah upload bukti transfer, mohon dicek.</p>
+      html: `<p>Order ${order.orderNumber} dari ${escapeHtml(order.buyerName)} sudah upload bukti transfer, mohon dicek.</p>
              <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
     });
   } catch (error) {
@@ -153,7 +167,7 @@ export async function sendPaymentConfirmedEmails(orderId: string): Promise<void>
     await safeSend({
       to: order.buyerEmail,
       subject: `Pembayaran dikonfirmasi: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, pembayaran untuk order ${order.orderNumber} sudah dikonfirmasi. Terima kasih!</p>`,
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, pembayaran untuk order ${order.orderNumber} sudah dikonfirmasi. Terima kasih!</p>`,
     });
 
     const vendorEmails = new Map(order.items.map((item) => [item.vendor.id, item.vendor.email]));
@@ -178,7 +192,7 @@ export async function sendProofRejectedEmail(orderId: string): Promise<void> {
     await safeSend({
       to: order.buyerEmail,
       subject: `Bukti transfer belum valid: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, bukti transfer untuk order ${order.orderNumber} belum bisa diverifikasi.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, bukti transfer untuk order ${order.orderNumber} belum bisa diverifikasi.</p>
              <p>Silakan upload ulang di: <a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
     });
   } catch (error) {
@@ -193,7 +207,7 @@ export async function sendReminderEmail(orderId: string): Promise<void> {
     await safeSend({
       to: order.buyerEmail,
       subject: `Reminder: order ${order.orderNumber} belum dibayar`,
-      html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sebesar ${formatRupiah(order.total)} belum kami terima pembayarannya.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, order ${order.orderNumber} sebesar ${formatRupiah(order.total)} belum kami terima pembayarannya.</p>
              <p>Order akan kedaluwarsa otomatis jika belum dibayar dalam 3x24 jam.</p>
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
     });
@@ -209,7 +223,7 @@ export async function sendOrderCancelledEmail(orderId: string): Promise<void> {
     await safeSend({
       to: order.buyerEmail,
       subject: `Order dibatalkan: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sudah dibatalkan oleh admin.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, order ${order.orderNumber} sudah dibatalkan oleh admin.</p>
              <p>Kalau ini tidak sesuai harapan kamu, silakan hubungi panitia.</p>`,
     });
   } catch (error) {
@@ -224,7 +238,7 @@ export async function sendExpiredEmail(orderId: string): Promise<void> {
     await safeSend({
       to: order.buyerEmail,
       subject: `Order kedaluwarsa: ${order.orderNumber}`,
-      html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sudah kedaluwarsa karena belum ada pembayaran.</p>
+      html: `<p>Halo ${escapeHtml(order.buyerName)}, order ${order.orderNumber} sudah kedaluwarsa karena belum ada pembayaran.</p>
              <p>Kalau kamu masih ingin memesan, silakan buat pesanan baru.</p>`,
     });
   } catch (error) {
