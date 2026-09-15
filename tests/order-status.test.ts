@@ -3,12 +3,14 @@ import {
   canUploadProof,
   canConfirmPayment,
   canRejectProof,
+  canCancelOrder,
   getReminderAction,
 } from "../src/lib/order-status";
 
 describe("status guards", () => {
   it("only allows proof upload while PENDING_PAYMENT", () => {
     expect(canUploadProof("PENDING_PAYMENT")).toBe(true);
+    expect(canUploadProof("RESERVED")).toBe(false);
     expect(canUploadProof("AWAITING_CONFIRMATION")).toBe(false);
     expect(canUploadProof("PAID")).toBe(false);
     expect(canUploadProof("EXPIRED")).toBe(false);
@@ -23,6 +25,18 @@ describe("status guards", () => {
   it("only allows rejecting proof while AWAITING_CONFIRMATION", () => {
     expect(canRejectProof("AWAITING_CONFIRMATION")).toBe(true);
     expect(canRejectProof("PAID")).toBe(false);
+  });
+
+  it("allows cancelling RESERVED (preorder), PENDING_PAYMENT, and AWAITING_CONFIRMATION orders", () => {
+    expect(canCancelOrder("RESERVED")).toBe(true);
+    expect(canCancelOrder("PENDING_PAYMENT")).toBe(true);
+    expect(canCancelOrder("AWAITING_CONFIRMATION")).toBe(true);
+  });
+
+  it("does not allow cancelling PAID, EXPIRED, or already-CANCELLED orders", () => {
+    expect(canCancelOrder("PAID")).toBe(false);
+    expect(canCancelOrder("EXPIRED")).toBe(false);
+    expect(canCancelOrder("CANCELLED")).toBe(false);
   });
 });
 

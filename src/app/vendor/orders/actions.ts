@@ -11,7 +11,7 @@ export async function updateFulfillmentStatus(orderId: string, formData: FormDat
   }
 
   const newStatus = formData.get("status");
-  if (newStatus !== "PROCESSING" && newStatus !== "DONE") {
+  if (newStatus !== "PROCESSING" && newStatus !== "IN_PRODUCTION" && newStatus !== "DONE") {
     throw new Error("Status tidak valid.");
   }
 

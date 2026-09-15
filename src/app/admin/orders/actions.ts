@@ -98,7 +98,11 @@ export async function cancelOrder(orderId: string): Promise<void> {
   }
 
   // Same stock-restoration pattern as the EXPIRE path in the daily cron job:
-  // release any units this order reserved for STOCK-mode products.
+  // release any units this order reserved for STOCK-mode products. A
+  // still-RESERVED (preorder, quota not met yet) order also gives back its
+  // slot in the running quota count — safe only pre-seal, since once the
+  // round transitions to PENDING_PAYMENT the counter has already been reset
+  // for the *next* round and no longer refers to this order.
   await prisma.$transaction([
     prisma.order.update({
       where: { id: orderId },
@@ -110,6 +114,14 @@ export async function cancelOrder(orderId: string): Promise<void> {
         data: { stock: { increment: item.qty } },
       })
     ),
+    ...(order.status === "RESERVED"
+      ? order.items.map((item) =>
+          prisma.product.updateMany({
+            where: { id: item.productId, isPreorder: true },
+            data: { preorderReservedQty: { decrement: item.qty } },
+          })
+        )
+      : []),
   ]);
 
   await sendOrderCancelledEmail(orderId);

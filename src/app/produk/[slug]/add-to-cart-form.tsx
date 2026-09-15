@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { addToCart } from "@/lib/cart";
+import { addToCart, CartConflictError } from "@/lib/cart";
 import { QuantityStepper } from "@/components/quantity-stepper";
 
 interface VariantOption {
@@ -26,6 +26,8 @@ export function AddToCartForm({
   available = true,
   unavailableReason,
   maxQty,
+  isPreorder = false,
+  preorderProgress,
 }: {
   productId: string;
   productSlug: string;
@@ -37,25 +39,37 @@ export function AddToCartForm({
   available?: boolean;
   unavailableReason?: string;
   maxQty?: number;
+  isPreorder?: boolean;
+  preorderProgress?: { reserved: number; min: number } | null;
 }) {
   const router = useRouter();
   const [variantId, setVariantId] = useState<string>(variants[0]?.id ?? "");
   const [qty, setQty] = useState(maxQty !== undefined ? Math.min(1, maxQty) : 1);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   function handleAdd() {
     const variant = variants.find((v) => v.id === variantId) ?? null;
-    addToCart({
-      itemKey: `${productId}:${variant?.id ?? "none"}`,
-      productId,
-      productSlug,
-      productName,
-      vendorBrandName,
-      vendorAllowsPickup,
-      variantId: variant?.id ?? null,
-      variantLabel: variant?.label ?? "",
-      unitPrice: variant?.price ?? basePrice,
-      qty,
-    });
+    try {
+      addToCart({
+        itemKey: `${productId}:${variant?.id ?? "none"}`,
+        productId,
+        productSlug,
+        productName,
+        vendorBrandName,
+        vendorAllowsPickup,
+        isPreorder,
+        variantId: variant?.id ?? null,
+        variantLabel: variant?.label ?? "",
+        unitPrice: variant?.price ?? basePrice,
+        qty,
+      });
+    } catch (err) {
+      if (err instanceof CartConflictError) {
+        setCartError(err.message);
+        return;
+      }
+      throw err;
+    }
     router.push("/keranjang");
   }
 
@@ -94,11 +108,17 @@ export function AddToCartForm({
       {!vendorAllowsPickup && (
         <p className="text-xs text-gray-500">Produk ini hanya bisa dikirim (vendor tidak melayani ambil di venue).</p>
       )}
+      {isPreorder && preorderProgress && (
+        <p className="text-xs text-gray-500">
+          Sudah dipesan: {preorderProgress.reserved} dari minimal {preorderProgress.min} pcs. Belum perlu bayar — kami kirim email begitu kuota terpenuhi.
+        </p>
+      )}
+      {cartError && <p className="text-sm text-red-600">{cartError}</p>}
       <button
         onClick={handleAdd}
         className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white"
       >
-        Tambah ke Keranjang
+        {isPreorder ? "Pesan" : "Tambah ke Keranjang"}
       </button>
     </div>
   );

@@ -30,6 +30,18 @@ async function safeSend(args: { to: string; subject: string; html: string }): Pr
   }
 }
 
+// Shared by sendOrderCreatedEmails and sendPreorderQuotaMetEmail — both are
+// "here's how to pay" emails, they just fire at different points in time
+// (immediately at checkout vs. once a preorder's quota is met).
+function paymentInstructionsHtml(settings: { bankName: string; bankAccountNumber: string; bankAccountName: string; qrisImageUrl: string | null }): string {
+  const qrisHtml = settings.qrisImageUrl
+    ? `<p>Atau scan QRIS berikut:</p>
+       <p><img src="${siteBase()}${settings.qrisImageUrl}" alt="QRIS" width="200" style="max-width:200px;height:auto;" /></p>`
+    : "";
+  return `<p>Silakan transfer ke: ${settings.bankName} ${settings.bankAccountNumber} a.n. ${settings.bankAccountName}.</p>
+          ${qrisHtml}`;
+}
+
 export async function sendOrderCreatedEmails(orderId: string): Promise<void> {
   try {
     const order = await prisma.order.findUniqueOrThrow({
@@ -45,22 +57,73 @@ export async function sendOrderCreatedEmails(orderId: string): Promise<void> {
              <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
     });
 
-    const qrisHtml = settings.qrisImageUrl
-      ? `<p>Atau scan QRIS berikut:</p>
-         <p><img src="${siteBase()}${settings.qrisImageUrl}" alt="QRIS" width="200" style="max-width:200px;height:auto;" /></p>`
-      : "";
-
     await safeSend({
       to: order.buyerEmail,
       subject: `Pesanan kamu diterima: ${order.orderNumber}`,
       html: `<p>Halo ${order.buyerName}, pesanan kamu sebesar ${formatRupiah(order.total)} sudah diterima.</p>
-             <p>Silakan transfer ke: ${settings.bankName} ${settings.bankAccountNumber} a.n. ${settings.bankAccountName}.</p>
-             ${qrisHtml}
+             ${paymentInstructionsHtml(settings)}
              <p>Lalu upload bukti transfer di halaman berikut:</p>
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
     });
   } catch (error) {
     console.error("sendOrderCreatedEmails failed:", error);
+  }
+}
+
+// Sent right after a buyer reserves a preorder slot — no payment info yet,
+// since payment is only requested once the product's minimum quota is met.
+export async function sendPreorderReservationEmails(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { items: { include: { product: true } } },
+    });
+    const settings = await prisma.adminSettings.findUniqueOrThrow({ where: { id: "singleton" } });
+    const product = order.items[0]?.product;
+
+    await safeSend({
+      to: settings.adminNotificationEmail,
+      subject: `Reservasi preorder baru: ${order.orderNumber}`,
+      html: `<p>Reservasi preorder baru dari ${order.buyerName} sebesar ${formatRupiah(order.total)}.</p>
+             <p><a href="${orderUrl(order.token)}">Lihat detail order</a></p>`,
+    });
+
+    const progressHtml = product
+      ? `<p>Progress kuota saat ini: ${product.preorderReservedQty} dari minimal ${product.preorderMinQty} pcs.</p>`
+      : "";
+
+    await safeSend({
+      to: order.buyerEmail,
+      subject: `Reservasi preorder kamu diterima: ${order.orderNumber}`,
+      html: `<p>Halo ${order.buyerName}, reservasi preorder kamu (${formatRupiah(order.total)}) sudah diterima.</p>
+             <p>Ini <strong>belum perlu dibayar</strong> — kami akan kirim email instruksi pembayaran begitu kuota minimum produk ini terpenuhi.</p>
+             ${progressHtml}
+             <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
+    });
+  } catch (error) {
+    console.error("sendPreorderReservationEmails failed:", error);
+  }
+}
+
+// Sent once a preorder's quota is met and the order moves from RESERVED to
+// PENDING_PAYMENT — this is the buyer's actual "please pay now" email,
+// giving them the same 3-day window the existing reminder cron enforces.
+export async function sendPreorderQuotaMetEmail(orderId: string): Promise<void> {
+  try {
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+    const settings = await prisma.adminSettings.findUniqueOrThrow({ where: { id: "singleton" } });
+
+    await safeSend({
+      to: order.buyerEmail,
+      subject: `Kuota preorder terpenuhi, silakan bayar: ${order.orderNumber}`,
+      html: `<p>Halo ${order.buyerName}, kabar baik — kuota minimum untuk preorder kamu sudah terpenuhi!</p>
+             <p>Silakan selesaikan pembayaran sebesar ${formatRupiah(order.total)} dalam 3 hari ke depan.</p>
+             ${paymentInstructionsHtml(settings)}
+             <p>Lalu upload bukti transfer di halaman berikut:</p>
+             <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
+    });
+  } catch (error) {
+    console.error("sendPreorderQuotaMetEmail failed:", error);
   }
 }
 
@@ -131,7 +194,7 @@ export async function sendReminderEmail(orderId: string): Promise<void> {
       to: order.buyerEmail,
       subject: `Reminder: order ${order.orderNumber} belum dibayar`,
       html: `<p>Halo ${order.buyerName}, order ${order.orderNumber} sebesar ${formatRupiah(order.total)} belum kami terima pembayarannya.</p>
-             <p>Order akan kedaluwarsa otomatis jika belum dibayar dalam 3x24 jam sejak dibuat.</p>
+             <p>Order akan kedaluwarsa otomatis jika belum dibayar dalam 3x24 jam.</p>
              <p><a href="${orderUrl(order.token)}">${orderUrl(order.token)}</a></p>`,
     });
   } catch (error) {

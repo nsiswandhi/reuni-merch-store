@@ -25,6 +25,7 @@ export default function KeranjangPage() {
   }, {});
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  const isPreorder = items.some((i) => i.isPreorder);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -41,6 +42,9 @@ export default function KeranjangPage() {
                 {vendorName}
                 {vendorItems.some((i) => i.vendorAllowsPickup === false) && (
                   <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs font-normal text-gray-600">Hanya Dikirim</span>
+                )}
+                {vendorItems.some((i) => i.isPreorder) && (
+                  <span className="ml-2 rounded bg-[#F3C21A] px-2 py-0.5 text-xs font-semibold text-[#124B23]">Preorder</span>
                 )}
               </h2>
               {vendorItems.map((item) => (
@@ -71,7 +75,7 @@ export default function KeranjangPage() {
             href="/checkout"
             className="block rounded bg-[#124B23] px-4 py-2 text-center font-semibold text-white"
           >
-            Lanjut ke Checkout
+            {isPreorder ? "Lanjut ke Reservasi" : "Lanjut ke Checkout"}
           </Link>
         </>
       )}

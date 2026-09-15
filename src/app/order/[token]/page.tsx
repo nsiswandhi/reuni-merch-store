@@ -7,6 +7,7 @@ function formatRupiah(amount: number): string {
 }
 
 const STATUS_LABELS: Record<string, string> = {
+  RESERVED: "Menunggu Kuota Terpenuhi",
   PENDING_PAYMENT: "Menunggu Pembayaran",
   AWAITING_CONFIRMATION: "Menunggu Konfirmasi Admin",
   PAID: "Sudah Dibayar",
@@ -18,7 +19,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ to
   const { token } = await params;
   const order = await prisma.order.findUnique({
     where: { token },
-    include: { items: { include: { vendor: true } } },
+    include: { items: { include: { vendor: true, product: true } } },
   });
 
   if (!order) {
@@ -38,6 +39,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ to
       <p className="mb-6 inline-block rounded bg-[#F3C21A] px-3 py-1 text-sm font-semibold">
         {STATUS_LABELS[order.status]}
       </p>
+
+      {order.status === "RESERVED" && (
+        <section className="mb-6 rounded border border-gray-200 p-4">
+          <h2 className="mb-2 font-semibold">Menunggu Kuota Terpenuhi</h2>
+          <p>Ini reservasi preorder — belum perlu dibayar.</p>
+          {order.items[0]?.product?.isPreorder && (
+            <p className="mt-1">
+              Progress: {order.items[0].product.preorderReservedQty} dari minimal {order.items[0].product.preorderMinQty} pcs.
+            </p>
+          )}
+          <p className="mt-2 text-sm text-gray-500">
+            Begitu kuota minimum tercapai, kami kirim email berisi instruksi pembayaran (batas waktu 3 hari).
+          </p>
+        </section>
+      )}
 
       {order.status === "PENDING_PAYMENT" && (
         <section className="mb-6 rounded border border-gray-200 p-4">

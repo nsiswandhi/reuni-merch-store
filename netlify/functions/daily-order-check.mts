@@ -14,7 +14,11 @@ export default async () => {
   let expired = 0;
 
   for (const order of pendingOrders) {
-    const action = getReminderAction(order.createdAt, order.reminderCount, now);
+    // For a preorder order, the 3-day payment window starts when the quota
+    // was met (paymentDueStartedAt), not when the buyer originally reserved
+    // (createdAt) — which could have been days earlier. Regular orders have
+    // no paymentDueStartedAt, so they keep using createdAt as before.
+    const action = getReminderAction(order.paymentDueStartedAt ?? order.createdAt, order.reminderCount, now);
 
     if (action === "SEND_REMINDER") {
       await sendReminderEmail(order.id);

@@ -45,6 +45,9 @@ export default async function KatalogPage({
                     {!product.vendor.allowsPickup && (
                       <span className="ml-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-600">Hanya Dikirim</span>
                     )}
+                    {product.isPreorder && (
+                      <span className="ml-1 rounded bg-[#F3C21A] px-1.5 py-0.5 text-[10px] font-semibold text-[#124B23]">Preorder</span>
+                    )}
                   </p>
                   <p className="font-semibold">{product.name}</p>
                   <p className="text-sm text-[#124B23]">

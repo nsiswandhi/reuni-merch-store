@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth/current-user";
 
 const STATUS_LABELS: Record<string, string> = {
+  RESERVED: "Menunggu Kuota",
   PENDING_PAYMENT: "Menunggu Pembayaran",
   AWAITING_CONFIRMATION: "Menunggu Konfirmasi",
   PAID: "Sudah Dibayar",

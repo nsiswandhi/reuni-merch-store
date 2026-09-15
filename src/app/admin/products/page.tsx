@@ -31,6 +31,9 @@ export default async function AdminProductsPage() {
               availabilityMode: product.availabilityMode,
               lastOrderAt: product.lastOrderAt ? product.lastOrderAt.toISOString().slice(0, 10) : null,
               stock: product.stock,
+              isPreorder: product.isPreorder,
+              preorderMinQty: product.preorderMinQty,
+              preorderReservedQty: product.preorderReservedQty,
             }}
             vendorName={product.vendor.brandName}
             vendors={vendorOptions}

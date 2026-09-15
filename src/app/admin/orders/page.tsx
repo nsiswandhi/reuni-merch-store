@@ -50,6 +50,7 @@ export default async function AdminOrdersPage({
         </select>
         <select name="status" defaultValue={status ?? ""} className="rounded border border-gray-300 px-3 py-2">
           <option value="">Semua Status</option>
+          <option value="RESERVED">Menunggu Kuota</option>
           <option value="PENDING_PAYMENT">Menunggu Pembayaran</option>
           <option value="AWAITING_CONFIRMATION">Menunggu Konfirmasi</option>
           <option value="PAID">Sudah Dibayar</option>

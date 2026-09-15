@@ -1,4 +1,4 @@
-export type OrderStatus = "PENDING_PAYMENT" | "AWAITING_CONFIRMATION" | "PAID" | "EXPIRED" | "CANCELLED";
+export type OrderStatus = "RESERVED" | "PENDING_PAYMENT" | "AWAITING_CONFIRMATION" | "PAID" | "EXPIRED" | "CANCELLED";
 
 export function canUploadProof(status: OrderStatus): boolean {
   return status === "PENDING_PAYMENT";
@@ -12,11 +12,13 @@ export function canRejectProof(status: OrderStatus): boolean {
   return status === "AWAITING_CONFIRMATION";
 }
 
-// Cancelling releases any stock the order reserved at checkout, so it's only
-// allowed before payment is confirmed — an already-PAID order represents a
-// real, fulfilled transaction and isn't cancellable from here.
+// Cancelling releases any stock (or preorder quota slot) the order reserved
+// at checkout, so it's only allowed before payment is confirmed — an
+// already-PAID order represents a real, fulfilled transaction and isn't
+// cancellable from here. RESERVED (preorder, quota not met yet) is
+// cancellable too, so admins can release someone's reservation.
 export function canCancelOrder(status: OrderStatus): boolean {
-  return status === "PENDING_PAYMENT" || status === "AWAITING_CONFIRMATION";
+  return status === "RESERVED" || status === "PENDING_PAYMENT" || status === "AWAITING_CONFIRMATION";
 }
 
 const HOUR_MS = 60 * 60 * 1000;

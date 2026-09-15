@@ -10,6 +10,10 @@ datasource db {
 }
 
 enum OrderStatus {
+  // Preorder reservation, before the minimum quota is met — no payment
+  // requested yet. Regular (non-preorder) orders skip this status entirely
+  // and start straight at PENDING_PAYMENT.
+  RESERVED
   PENDING_PAYMENT
   AWAITING_CONFIRMATION
   PAID
@@ -24,6 +28,9 @@ enum DeliveryMethod {
 
 enum FulfillmentStatus {
   PROCESSING
+  // Preorder-specific: vendor is producing the goods (1-2 weeks) after
+  // payment is confirmed but before they're ready to ship/hand off.
+  IN_PRODUCTION
   DONE
 }
 
@@ -70,6 +77,14 @@ model Product {
   availabilityMode AvailabilityMode @default(ALWAYS)
   lastOrderAt DateTime?
   stock       Int?
+  // Preorder / group-buy mode: buyers "reserve" instead of buying outright,
+  // and no payment is requested until preorderReservedQty reaches
+  // preorderMinQty (see the RESERVED order status). Once a round's quota is
+  // met, preorderReservedQty resets to 0 so the next round starts counting
+  // fresh automatically.
+  isPreorder           Boolean  @default(false)
+  preorderMinQty       Int?
+  preorderReservedQty  Int      @default(0)
   createdAt   DateTime  @default(now())
   variants    ProductVariant[]
   orderItems  OrderItem[]
@@ -116,6 +131,16 @@ model Order {
   confirmedAt     DateTime?
   cancelledAt     DateTime?
   reminderCount   Int            @default(0)
+  // True for orders created via the preorder/reservation flow (status starts
+  // at RESERVED instead of PENDING_PAYMENT). Denormalized here so it doesn't
+  // need a join through items -> product for admin filtering/display.
+  isPreorder          Boolean   @default(false)
+  // When the 3-day payment window actually started — set once the
+  // preorder's quota is met (not at order creation time, which for a
+  // preorder order is just when the buyer reserved). The daily reminder
+  // cron uses this (falling back to createdAt for regular orders) so the
+  // existing 24h/48h/72h reminder cadence works unchanged for both flows.
+  paymentDueStartedAt DateTime?
   createdAt       DateTime       @default(now())
   items           OrderItem[]
 }

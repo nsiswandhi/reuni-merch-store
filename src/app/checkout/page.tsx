@@ -45,10 +45,18 @@ export default function CheckoutPage() {
   }, [state.orderToken, router]);
 
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  const isPreorder = items.some((i) => i.isPreorder);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 font-[Bebas_Neue] text-3xl text-[#124B23]">Checkout</h1>
+      <h1 className="mb-6 font-[Bebas_Neue] text-3xl text-[#124B23]">
+        {isPreorder ? "Pesan Preorder" : "Checkout"}
+      </h1>
+      {isPreorder && (
+        <p className="mb-4 rounded border border-[#F3C21A] bg-[#F3C21A]/10 px-3 py-2 text-sm">
+          Ini reservasi preorder — belum perlu bayar sekarang. Kami kirim email instruksi pembayaran begitu kuota minimum produk ini terpenuhi.
+        </p>
+      )}
       <form action={formAction} className="flex flex-col gap-4">
         <input type="hidden" name="cartItems" value={JSON.stringify(items.map((i) => ({
           productId: i.productId,
@@ -101,7 +109,9 @@ export default function CheckoutPage() {
 
         <div className="rounded border border-gray-200 p-3">
           <p>Subtotal: {formatRupiah(subtotal)}</p>
-          <p className="text-sm text-gray-500">Ongkir dihitung otomatis kalau pilih Dikirim.</p>
+          <p className="text-sm text-gray-500">
+            {isPreorder ? "Total akan ditagihkan setelah kuota preorder terpenuhi." : "Ongkir dihitung otomatis kalau pilih Dikirim."}
+          </p>
         </div>
 
         {state.error && <p className="text-sm text-red-600">{state.error}</p>}
@@ -111,7 +121,7 @@ export default function CheckoutPage() {
           disabled={pending || items.length === 0}
           className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white disabled:opacity-50"
         >
-          {pending ? "Memproses..." : "Buat Pesanan"}
+          {pending ? "Memproses..." : isPreorder ? "Buat Reservasi" : "Buat Pesanan"}
         </button>
       </form>
     </main>

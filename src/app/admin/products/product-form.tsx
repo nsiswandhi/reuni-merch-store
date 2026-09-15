@@ -14,6 +14,53 @@ import {
 
 type AvailabilityMode = "ALWAYS" | "LAST_ORDER_DATE" | "STOCK";
 
+// Shared by NewProductForm and EditProductForm, same rationale as
+// AvailabilityFields below. isPreorder is handled as a plain checkbox
+// (presence in FormData means checked, like Vendor.allowsPickup).
+function PreorderFields({
+  isPreorder,
+  onIsPreorderChange,
+  defaultPreorderMinQty,
+  preorderReservedQty,
+}: {
+  isPreorder: boolean;
+  onIsPreorderChange: (checked: boolean) => void;
+  defaultPreorderMinQty?: number | string;
+  preorderReservedQty?: number;
+}) {
+  return (
+    <div className="mt-2 rounded border border-gray-200 p-3">
+      <label className="flex items-center gap-2 text-sm font-semibold">
+        <input
+          type="checkbox"
+          name="isPreorder"
+          checked={isPreorder}
+          onChange={(e) => onIsPreorderChange(e.target.checked)}
+        />
+        Preorder (pesan dulu, produksi setelah kuota terpenuhi)
+      </label>
+      {isPreorder && (
+        <div className="mt-2">
+          <input
+            name="preorderMinQty"
+            type="number"
+            min={1}
+            placeholder="Kuota minimum (mis. 36)"
+            required
+            defaultValue={defaultPreorderMinQty}
+            className="w-full rounded border border-gray-300 px-3 py-2"
+          />
+          {preorderReservedQty !== undefined && (
+            <p className="mt-1 text-xs text-gray-500">
+              Progress gelombang berjalan: {preorderReservedQty} pcs sudah dipesan.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Shared by NewProductForm and EditProductForm so the two forms can't drift
 // out of sync on what "availability" looks like as a form field.
 function AvailabilityFields({
@@ -67,6 +114,7 @@ function AvailabilityFields({
 export function NewProductForm({ vendors }: { vendors: { id: string; brandName: string }[] }) {
   const [error, setError] = useState<string | null>(null);
   const [availabilityMode, setAvailabilityMode] = useState<AvailabilityMode>("ALWAYS");
+  const [isPreorder, setIsPreorder] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     const result = await createProduct(formData);
@@ -92,6 +140,7 @@ export function NewProductForm({ vendors }: { vendors: { id: string; brandName: 
       />
 
       <AvailabilityFields availabilityMode={availabilityMode} onAvailabilityModeChange={setAvailabilityMode} />
+      <PreorderFields isPreorder={isPreorder} onIsPreorderChange={setIsPreorder} />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" className="rounded bg-[#124B23] px-4 py-2 font-semibold text-white">Simpan Produk</button>
@@ -108,6 +157,9 @@ interface ProductFields {
   availabilityMode: AvailabilityMode;
   lastOrderAt: string | null;
   stock: number | null;
+  isPreorder: boolean;
+  preorderMinQty: number | null;
+  preorderReservedQty: number;
 }
 
 export function EditProductForm({
@@ -120,6 +172,7 @@ export function EditProductForm({
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availabilityMode, setAvailabilityMode] = useState<AvailabilityMode>(product.availabilityMode);
+  const [isPreorder, setIsPreorder] = useState(product.isPreorder);
 
   async function handleSubmit(formData: FormData) {
     formData.set("productId", product.id);
@@ -163,6 +216,12 @@ export function EditProductForm({
         onAvailabilityModeChange={setAvailabilityMode}
         defaultLastOrderAt={product.lastOrderAt ?? undefined}
         defaultStock={product.stock ?? undefined}
+      />
+      <PreorderFields
+        isPreorder={isPreorder}
+        onIsPreorderChange={setIsPreorder}
+        defaultPreorderMinQty={product.preorderMinQty ?? undefined}
+        preorderReservedQty={product.isPreorder ? product.preorderReservedQty : undefined}
       />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -294,6 +353,11 @@ export function ProductCard({
               `Batas order: ${new Date(product.lastOrderAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
             {product.availabilityMode === "STOCK" && `Stok: ${product.stock ?? 0}`}
           </p>
+          {product.isPreorder && (
+            <p className="text-xs font-medium text-[#124B23]">
+              Preorder — {product.preorderReservedQty} dari minimal {product.preorderMinQty} pcs
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <EditProductForm product={product} vendors={vendors} />

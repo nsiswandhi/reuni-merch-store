@@ -49,6 +49,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
       <form action={updateFulfillmentStatus.bind(null, order.id)} className="flex items-center gap-2">
         <select name="status" defaultValue="PROCESSING" className="rounded border border-gray-300 px-3 py-2">
           <option value="PROCESSING">Diproses</option>
+          <option value="IN_PRODUCTION">Dalam Produksi</option>
           <option value="DONE">Selesai</option>
         </select>
         <button type="submit" className="rounded bg-[#124B23] px-4 py-2 text-white">

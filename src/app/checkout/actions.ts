@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { calculateOrderTotals } from "@/lib/money";
 import { generateOrderToken, generateOrderNumber } from "@/lib/order-number";
 import { checkoutFormSchema } from "@/lib/checkout-schema";
-import { sendOrderCreatedEmails } from "@/lib/email";
+import { sendOrderCreatedEmails, sendPreorderReservationEmails } from "@/lib/email";
 import { getProductAvailability } from "@/lib/availability";
+import { finalizePreorderRoundIfQuotaMet } from "@/lib/preorder-fulfillment";
 
 export interface CreateOrderState {
   error?: string;
@@ -57,6 +58,22 @@ export async function createOrder(
   // can't hand off in person, the whole order must be shipped.
   if (deliveryMethod === "PICKUP" && products.some((p) => !p.vendor.allowsPickup)) {
     return { error: "Salah satu vendor di pesananmu hanya melayani pengiriman — silakan pilih Dikirim." };
+  }
+
+  // Same rule enforced client-side in cart.ts's addToCart (CartConflictError)
+  // — re-checked here since cart contents are never trusted. A preorder
+  // order can't mix with regular items, and can only be tied to one
+  // product's quota, since the whole order transitions RESERVED ->
+  // PENDING_PAYMENT together when that one product's quota is met.
+  const isPreorderOrder = products.some((p) => p.isPreorder);
+  if (isPreorderOrder) {
+    if (products.some((p) => !p.isPreorder)) {
+      return { error: "Pesanan preorder tidak bisa dicampur dengan produk reguler." };
+    }
+    const preorderProductIds = new Set(items.map((i) => i.productId));
+    if (preorderProductIds.size > 1) {
+      return { error: "Pesanan preorder hanya boleh berisi 1 produk." };
+    }
   }
 
   const resolvedItems: {
@@ -123,6 +140,17 @@ export async function createOrder(
         }
       }
 
+      // Preorder reservations don't count against stock or trigger payment
+      // yet — they add to the product's running quota instead.
+      if (isPreorderOrder) {
+        const preorderProductId = resolvedItems[0].productId;
+        const totalQty = resolvedItems.reduce((sum, i) => sum + i.qty, 0);
+        await tx.product.update({
+          where: { id: preorderProductId },
+          data: { preorderReservedQty: { increment: totalQty } },
+        });
+      }
+
       return tx.order.create({
         data: {
           orderNumber: generateOrderNumber(),
@@ -136,6 +164,8 @@ export async function createOrder(
           subtotal: totals.subtotal,
           shippingCost: totals.shippingCost,
           total: totals.total,
+          status: isPreorderOrder ? "RESERVED" : "PENDING_PAYMENT",
+          isPreorder: isPreorderOrder,
           items: {
             create: resolvedItems.map((i) => ({
               productId: i.productId,
@@ -157,7 +187,14 @@ export async function createOrder(
     throw err;
   }
 
-  await sendOrderCreatedEmails(order.id);
+  if (isPreorderOrder) {
+    await sendPreorderReservationEmails(order.id);
+    // Real-time check (not just the daily cron) so buyers get the payment
+    // email the moment the quota is crossed, not up to a day later.
+    await finalizePreorderRoundIfQuotaMet(resolvedItems[0].productId);
+  } else {
+    await sendOrderCreatedEmails(order.id);
+  }
 
   return { orderToken: order.token };
 }

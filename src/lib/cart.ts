@@ -8,11 +8,19 @@ export interface CartItem {
   // false means this item can only ever be shipped — used at checkout to
   // decide whether "Ambil di Venue" can be offered for the whole cart.
   vendorAllowsPickup: boolean;
+  // Preorder items go through the RESERVED flow (no immediate payment) —
+  // see addToCart below for why a cart can't mix these with regular items.
+  isPreorder: boolean;
   variantId: string | null;
   variantLabel: string;
   unitPrice: number;
   qty: number;
 }
+
+// Thrown by addToCart instead of silently merging incompatible items — the
+// caller (add-to-cart-form.tsx) catches this and shows the message so the
+// buyer can clear their cart first.
+export class CartConflictError extends Error {}
 
 const STORAGE_KEY = "reuni-cart";
 
@@ -33,6 +41,29 @@ function saveCart(items: CartItem[]): void {
 
 export function addToCart(newItem: CartItem): CartItem[] {
   const items = getCart();
+
+  // Preorder orders go through a completely different flow (RESERVED,
+  // waiting on a shared quota) than regular ones, and a preorder order can
+  // only be tied to one product's quota — so a cart can't mix preorder with
+  // regular items, nor mix two different preorder products.
+  const existingPreorderItem = items.find((i) => i.isPreorder);
+  if (newItem.isPreorder) {
+    if (items.some((i) => !i.isPreorder)) {
+      throw new CartConflictError(
+        "Keranjang berisi produk reguler. Kosongkan keranjang dulu untuk memesan produk preorder ini."
+      );
+    }
+    if (existingPreorderItem && existingPreorderItem.productId !== newItem.productId) {
+      throw new CartConflictError(
+        "Keranjang preorder hanya bisa berisi 1 produk. Kosongkan keranjang dulu untuk memesan produk preorder lain."
+      );
+    }
+  } else if (existingPreorderItem) {
+    throw new CartConflictError(
+      "Keranjang berisi produk preorder. Kosongkan keranjang dulu untuk membeli produk reguler ini."
+    );
+  }
+
   const existing = items.find((i) => i.itemKey === newItem.itemKey);
   const updated = existing
     ? items.map((i) => (i.itemKey === newItem.itemKey ? { ...i, qty: i.qty + newItem.qty } : i))

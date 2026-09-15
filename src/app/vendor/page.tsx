@@ -6,6 +6,7 @@ interface ProductSummary {
   key: string;
   label: string;
   PROCESSING: number;
+  IN_PRODUCTION: number;
   DONE: number;
   total: number;
 }
@@ -28,7 +29,7 @@ export default async function VendorOrdersPage() {
     const label = item.variantLabelSnapshot
       ? `${item.productNameSnapshot} ${item.variantLabelSnapshot}`
       : item.productNameSnapshot;
-    const existing = summaryByProduct.get(key) ?? { key, label, PROCESSING: 0, DONE: 0, total: 0 };
+    const existing = summaryByProduct.get(key) ?? { key, label, PROCESSING: 0, IN_PRODUCTION: 0, DONE: 0, total: 0 };
     existing[item.fulfillmentStatus] += item.qty;
     existing.total += item.qty;
     summaryByProduct.set(key, existing);
@@ -36,6 +37,7 @@ export default async function VendorOrdersPage() {
   const productSummaries = [...summaryByProduct.values()].sort((a, b) => a.label.localeCompare(b.label));
   const grandTotal = {
     PROCESSING: productSummaries.reduce((sum, p) => sum + p.PROCESSING, 0),
+    IN_PRODUCTION: productSummaries.reduce((sum, p) => sum + p.IN_PRODUCTION, 0),
     DONE: productSummaries.reduce((sum, p) => sum + p.DONE, 0),
     total: productSummaries.reduce((sum, p) => sum + p.total, 0),
   };
@@ -51,6 +53,7 @@ export default async function VendorOrdersPage() {
             <tr className="border-b text-left">
               <th className="p-2">Produk</th>
               <th className="p-2">Diproses</th>
+              <th className="p-2">Dalam Produksi</th>
               <th className="p-2">Selesai</th>
               <th className="p-2">Total</th>
             </tr>
@@ -60,6 +63,7 @@ export default async function VendorOrdersPage() {
               <tr key={p.key} className="border-b">
                 <td className="p-2">{p.label}</td>
                 <td className="p-2">{p.PROCESSING}</td>
+                <td className="p-2">{p.IN_PRODUCTION}</td>
                 <td className="p-2">{p.DONE}</td>
                 <td className="p-2 font-semibold">{p.total}</td>
               </tr>
@@ -69,6 +73,7 @@ export default async function VendorOrdersPage() {
             <tr className="border-t-2 border-gray-300 font-semibold">
               <td className="p-2">Total Keseluruhan</td>
               <td className="p-2">{grandTotal.PROCESSING}</td>
+              <td className="p-2">{grandTotal.IN_PRODUCTION}</td>
               <td className="p-2">{grandTotal.DONE}</td>
               <td className="p-2">{grandTotal.total}</td>
             </tr>

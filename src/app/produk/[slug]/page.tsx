@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getProductBySlug, getDisplayPriceRange } from "@/lib/products";
 import { getProductAvailability } from "@/lib/availability";
+import { getPreorderProgress } from "@/lib/preorder";
 import { AddToCartForm } from "./add-to-cart-form";
 
 function formatRupiah(amount: number): string {
@@ -19,6 +20,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { min, max } = getDisplayPriceRange(product);
   const priceDisplay = min === max ? formatRupiah(min) : `${formatRupiah(min)} – ${formatRupiah(max)}`;
   const availability = getProductAvailability(product);
+  const preorderProgress = getPreorderProgress(product);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -29,6 +31,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {product.vendor.brandName}
         {!product.vendor.allowsPickup && (
           <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-600">Hanya Dikirim</span>
+        )}
+        {product.isPreorder && (
+          <span className="ml-2 rounded bg-[#F3C21A] px-2 py-0.5 text-xs font-semibold text-[#124B23]">Preorder</span>
         )}
       </p>
       <h1 className="mb-2 font-[Bebas_Neue] text-3xl text-[#124B23]">{product.name}</h1>
@@ -53,6 +58,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         available={availability.isAvailable}
         unavailableReason={availability.reasonLabel}
         maxQty={product.availabilityMode === "STOCK" ? availability.remainingStock : undefined}
+        isPreorder={product.isPreorder}
+        preorderProgress={preorderProgress}
       />
     </main>
   );
