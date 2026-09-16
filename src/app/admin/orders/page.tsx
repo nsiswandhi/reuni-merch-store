@@ -30,7 +30,12 @@ export default async function AdminOrdersPage({
   }
 
   const [orders, vendors] = await Promise.all([
-    prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { items: { include: { vendor: true } } },
+    }),
     prisma.vendor.findMany({ orderBy: { brandName: "asc" } }),
   ]);
 
@@ -72,21 +77,29 @@ export default async function AdminOrdersPage({
           <tr className="border-b text-left">
             <th className="p-2">No. Order</th>
             <th className="p-2">Pembeli</th>
+            <th className="p-2">Item Produk</th>
+            <th className="p-2">Vendor</th>
             <th className="p-2">Total</th>
             <th className="p-2">Status</th>
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
-            <tr key={order.id} className="border-b hover:bg-gray-50">
-              <td className="p-2">
-                <Link href={`/admin/orders/${order.id}`} className="underline">{order.orderNumber}</Link>
-              </td>
-              <td className="p-2">{order.buyerName}</td>
-              <td className="p-2">{formatRupiah(order.total)}</td>
-              <td className="p-2">{order.status}</td>
-            </tr>
-          ))}
+          {orders.map((order) => {
+            const itemsLabel = order.items.map((item) => item.productNameSnapshot).join(", ");
+            const vendorsLabel = Array.from(new Set(order.items.map((item) => item.vendor.brandName))).join(", ");
+            return (
+              <tr key={order.id} className="border-b hover:bg-gray-50">
+                <td className="p-2">
+                  <Link href={`/admin/orders/${order.id}`} className="underline">{order.orderNumber}</Link>
+                </td>
+                <td className="p-2">{order.buyerName}</td>
+                <td className="p-2">{itemsLabel}</td>
+                <td className="p-2">{vendorsLabel}</td>
+                <td className="p-2">{formatRupiah(order.total)}</td>
+                <td className="p-2">{order.status}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </main>
