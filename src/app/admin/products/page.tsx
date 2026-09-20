@@ -50,8 +50,8 @@ export default async function AdminProductsPage() {
                     preorderNote: product.preorderNote,
                   }}
                   vendors={vendorOptions}
-                  activeVariants={product.variants.filter((v) => v.isActive)}
-                  inactiveVariants={product.variants.filter((v) => !v.isActive)}
+                  activeVariants={product.variants.filter((v) => v.isActive).sort((a, b) => a.sortOrder - b.sortOrder)}
+                  inactiveVariants={product.variants.filter((v) => !v.isActive).sort((a, b) => a.sortOrder - b.sortOrder)}
                 />
               ))}
             </div>

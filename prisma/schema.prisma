@@ -102,6 +102,13 @@ model ProductVariant {
   price      Int
   sku        String   @default("")
   sortOrder  Int      @default(0)
+  // Only meaningful (and only shown/editable in the admin UI) when the
+  // parent Product's availabilityMode is STOCK — null otherwise. Tracked
+  // per-variant so admins can see/allocate stock by size/color, but the
+  // authoritative number checkout actually decrements against is still
+  // Product.stock; admins are expected (and validated, see
+  // admin/products/actions.ts) to keep the sum of variant stock within it.
+  stock      Int?
   isActive   Boolean  @default(true)
   orderItems OrderItem[]
 }

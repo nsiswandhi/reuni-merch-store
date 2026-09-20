@@ -188,19 +188,45 @@ export async function updateProduct(formData: FormData): Promise<{ error?: strin
 
   const { productId, availabilityMode, lastOrderAt, stock, isPreorder, preorderMinQty, preorderNote, ...productData } = parsed.data;
 
-  await prisma.product.update({
-    where: { id: productId },
-    data: {
-      ...productData,
-      ...(imageUrl ? { imageUrl } : {}),
-      availabilityMode,
-      lastOrderAt: availabilityMode === "LAST_ORDER_DATE" ? new Date(`${lastOrderAt}T23:59:59+07:00`) : null,
-      stock: availabilityMode === "STOCK" ? Number(stock) : null,
-      isPreorder,
-      preorderMinQty: isPreorder ? Number(preorderMinQty) : null,
-      preorderNote: isPreorder ? (preorderNote?.trim() || null) : null,
-    },
-  });
+  // Same total-stock invariant enforced from the other direction (see
+  // resolveVariantStock in the variant actions below): an admin lowering the
+  // product's own stock number below what's already allocated across its
+  // variants would otherwise silently leave the variant totals inconsistent.
+  const newStock = availabilityMode === "STOCK" ? Number(stock) : null;
+  if (newStock !== null) {
+    const activeVariants = await prisma.productVariant.findMany({
+      where: { productId, isActive: true },
+      select: { stock: true },
+    });
+    const variantTotal = activeVariants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
+    if (variantTotal > newStock) {
+      return {
+        error: `Stok produk (${newStock}) lebih kecil dari total stok varian yang sudah diisi (${variantTotal}). Kurangi dulu stok varian, atau naikkan stok produk.`,
+      };
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.product.update({
+      where: { id: productId },
+      data: {
+        ...productData,
+        ...(imageUrl ? { imageUrl } : {}),
+        availabilityMode,
+        lastOrderAt: availabilityMode === "LAST_ORDER_DATE" ? new Date(`${lastOrderAt}T23:59:59+07:00`) : null,
+        stock: newStock,
+        isPreorder,
+        preorderMinQty: isPreorder ? Number(preorderMinQty) : null,
+        preorderNote: isPreorder ? (preorderNote?.trim() || null) : null,
+      },
+    }),
+    // Availability mode no longer STOCK — any per-variant stock numbers are
+    // stale/unused from here on, so clear them rather than leaving them to
+    // silently reappear if the product is switched back to STOCK later.
+    ...(availabilityMode !== "STOCK"
+      ? [prisma.productVariant.updateMany({ where: { productId }, data: { stock: null } })]
+      : []),
+  ]);
 
   revalidatePath("/admin/products");
   revalidatePath("/");
@@ -225,7 +251,62 @@ const variantSchema = z.object({
   productId: z.string().min(1),
   label: z.string().min(1),
   price: z.coerce.number().int().min(1),
+  // Manual display-order override (see lib/products.ts, which already
+  // orders variants by this field) — added because auto-detecting the
+  // "right" order (numeric for sandal sizes, XS..6XL for apparel) from a
+  // free-text label isn't reliable across every product type vendors sell.
+  sortOrder: z.string().optional(),
+  // Only required/used when the parent product's availabilityMode is
+  // STOCK — validated against that product's total stock below, since a
+  // plain schema can't see the parent product's own fields or sibling
+  // variants.
+  stock: z.string().optional(),
 });
+
+// Shared by addVariant and updateVariant: resolves the raw "stock" form
+// field into either a validated Int (or null, for a non-STOCK product) or
+// an error message. Loads the parent product fresh from the DB rather than
+// trusting anything the client sent, and sums only ACTIVE sibling variants
+// (excludeVariantId lets an update exclude the variant's own prior value)
+// since inactive variants aren't orderable and shouldn't count against the
+// total.
+async function resolveVariantStock(
+  productId: string,
+  rawStock: string | undefined,
+  excludeVariantId?: string
+): Promise<{ stock: number | null; error?: string }> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { availabilityMode: true, stock: true },
+  });
+  if (!product) {
+    return { stock: null, error: "Produk tidak ditemukan." };
+  }
+  if (product.availabilityMode !== "STOCK") {
+    return { stock: null };
+  }
+
+  const stockNum = Number(rawStock);
+  if (!rawStock || Number.isNaN(stockNum) || stockNum < 0) {
+    return { stock: null, error: "Stok varian wajib diisi untuk produk dengan Ketersediaan Stok Terbatas." };
+  }
+
+  const siblingVariants = await prisma.productVariant.findMany({
+    where: { productId, isActive: true, ...(excludeVariantId ? { id: { not: excludeVariantId } } : {}) },
+    select: { stock: true },
+  });
+  const othersTotal = siblingVariants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
+  const total = othersTotal + stockNum;
+  const productStock = product.stock ?? 0;
+  if (total > productStock) {
+    return {
+      stock: null,
+      error: `Total stok varian (${total}) melebihi stok produk (${productStock}).`,
+    };
+  }
+
+  return { stock: stockNum };
+}
 
 export async function addVariant(formData: FormData): Promise<{ error?: string }> {
   try {
@@ -238,11 +319,27 @@ export async function addVariant(formData: FormData): Promise<{ error?: string }
     productId: formData.get("productId"),
     label: formData.get("label"),
     price: formData.get("price"),
+    sortOrder: formData.get("sortOrder") || undefined,
+    stock: formData.get("stock") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   }
-  await prisma.productVariant.create({ data: parsed.data });
+
+  const stockResult = await resolveVariantStock(parsed.data.productId, parsed.data.stock);
+  if (stockResult.error) {
+    return { error: stockResult.error };
+  }
+
+  await prisma.productVariant.create({
+    data: {
+      productId: parsed.data.productId,
+      label: parsed.data.label,
+      price: parsed.data.price,
+      sortOrder: parsed.data.sortOrder ? Number(parsed.data.sortOrder) : 0,
+      stock: stockResult.stock,
+    },
+  });
   revalidatePath("/admin/products");
   revalidatePath("/");
   return {};
@@ -266,6 +363,8 @@ const updateVariantSchema = z.object({
   variantId: z.string().min(1),
   label: z.string().min(1),
   price: z.coerce.number().int().min(1),
+  sortOrder: z.string().optional(),
+  stock: z.string().optional(),
 });
 
 export async function updateVariant(formData: FormData): Promise<{ error?: string }> {
@@ -279,12 +378,38 @@ export async function updateVariant(formData: FormData): Promise<{ error?: strin
     variantId: formData.get("variantId"),
     label: formData.get("label"),
     price: formData.get("price"),
+    sortOrder: formData.get("sortOrder") || undefined,
+    stock: formData.get("stock") || undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   }
-  const { variantId, ...rest } = parsed.data;
-  await prisma.productVariant.update({ where: { id: variantId }, data: rest });
+
+  // productId is looked up server-side from the variant itself rather than
+  // trusted from the client, so a tampered form field can't point the stock
+  // validation at a different product.
+  const existing = await prisma.productVariant.findUnique({
+    where: { id: parsed.data.variantId },
+    select: { productId: true },
+  });
+  if (!existing) {
+    return { error: "Varian tidak ditemukan." };
+  }
+
+  const stockResult = await resolveVariantStock(existing.productId, parsed.data.stock, parsed.data.variantId);
+  if (stockResult.error) {
+    return { error: stockResult.error };
+  }
+
+  await prisma.productVariant.update({
+    where: { id: parsed.data.variantId },
+    data: {
+      label: parsed.data.label,
+      price: parsed.data.price,
+      sortOrder: parsed.data.sortOrder ? Number(parsed.data.sortOrder) : 0,
+      stock: stockResult.stock,
+    },
+  });
   revalidatePath("/admin/products");
   revalidatePath("/");
   return {};

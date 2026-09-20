@@ -293,7 +293,7 @@ export function ReactivateProductForm({ productId }: { productId: string }) {
   );
 }
 
-export function NewVariantForm({ productId }: { productId: string }) {
+export function NewVariantForm({ productId, showStock }: { productId: string; showStock: boolean }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
@@ -303,11 +303,28 @@ export function NewVariantForm({ productId }: { productId: string }) {
   }
 
   return (
-    <form action={handleSubmit} className="mt-2 flex items-center gap-2">
+    <form action={handleSubmit} className="mt-2 flex flex-wrap items-center gap-2">
       <input name="label" placeholder="Label varian (mis. L / Hitam)" required className="rounded border border-gray-300 px-2 py-1 text-sm" />
       <input name="price" type="number" placeholder="Harga" required className="w-28 rounded border border-gray-300 px-2 py-1 text-sm" />
+      <input
+        name="sortOrder"
+        type="number"
+        placeholder="Urutan (mis. 1)"
+        title="Urutan tampil varian — angka kecil tampil lebih dulu"
+        className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+      />
+      {showStock && (
+        <input
+          name="stock"
+          type="number"
+          min={0}
+          placeholder="Stok"
+          required
+          className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+        />
+      )}
       <button type="submit" className="rounded bg-gray-700 px-3 py-1 text-sm text-white">Tambah Varian</button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="w-full text-sm text-red-600">{error}</p>}
     </form>
   );
 }
@@ -317,9 +334,19 @@ interface VariantFields {
   productId: string;
   label: string;
   price: number;
+  sortOrder: number;
+  stock: number | null;
 }
 
-export function EditVariantForm({ variant, onDone }: { variant: VariantFields; onDone: () => void }) {
+export function EditVariantForm({
+  variant,
+  showStock,
+  onDone,
+}: {
+  variant: VariantFields;
+  showStock: boolean;
+  onDone: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
@@ -337,6 +364,23 @@ export function EditVariantForm({ variant, onDone }: { variant: VariantFields; o
     <form action={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
       <input name="label" defaultValue={variant.label} required className="w-28 rounded border border-gray-300 px-2 py-1 text-xs" />
       <input name="price" type="number" defaultValue={variant.price} required className="w-24 rounded border border-gray-300 px-2 py-1 text-xs" />
+      <input
+        name="sortOrder"
+        type="number"
+        defaultValue={variant.sortOrder}
+        title="Urutan tampil varian — angka kecil tampil lebih dulu"
+        className="w-20 rounded border border-gray-300 px-2 py-1 text-xs"
+      />
+      {showStock && (
+        <input
+          name="stock"
+          type="number"
+          min={0}
+          defaultValue={variant.stock ?? ""}
+          required
+          className="w-20 rounded border border-gray-300 px-2 py-1 text-xs"
+        />
+      )}
       <button type="submit" className="rounded bg-[#124B23] px-2 py-1 text-xs text-white">Simpan</button>
       <button type="button" onClick={onDone} className="rounded border border-gray-300 px-2 py-1 text-xs">Batal</button>
       {error && <p className="w-full text-xs text-red-600">{error}</p>}
@@ -344,20 +388,24 @@ export function EditVariantForm({ variant, onDone }: { variant: VariantFields; o
   );
 }
 
-export function VariantRow({ variant }: { variant: VariantFields }) {
+export function VariantRow({ variant, showStock }: { variant: VariantFields; showStock: boolean }) {
   const [editing, setEditing] = useState(false);
 
   if (editing) {
     return (
       <li className="border-b py-1">
-        <EditVariantForm variant={variant} onDone={() => setEditing(false)} />
+        <EditVariantForm variant={variant} showStock={showStock} onDone={() => setEditing(false)} />
       </li>
     );
   }
 
   return (
     <li className="flex items-center justify-between border-b py-1">
-      <span>{variant.label} — Rp{variant.price.toLocaleString("id-ID")}</span>
+      <span>
+        {variant.label} — Rp{variant.price.toLocaleString("id-ID")}
+        <span className="text-gray-400"> · Urutan {variant.sortOrder}</span>
+        {showStock && <span className="text-gray-400"> · Stok {variant.stock ?? 0}</span>}
+      </span>
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setEditing(true)} className="text-xs underline">Edit</button>
         <form action={deleteVariant.bind(null, variant.id)}>
@@ -390,6 +438,7 @@ export function ProductCard({
   activeVariants: VariantFields[];
   inactiveVariants: VariantFields[];
 }) {
+  const showStock = product.availabilityMode === "STOCK";
   return (
     <div className="rounded border border-gray-200 p-4">
       <div className="flex items-center justify-between">
@@ -426,10 +475,10 @@ export function ProductCard({
         </summary>
         <ul className="mt-2 text-sm">
           {activeVariants.map((v) => (
-            <VariantRow key={v.id} variant={v} />
+            <VariantRow key={v.id} variant={v} showStock={showStock} />
           ))}
         </ul>
-        <NewVariantForm productId={product.id} />
+        <NewVariantForm productId={product.id} showStock={showStock} />
 
         {inactiveVariants.length > 0 && (
           <div className="mt-3">
@@ -437,7 +486,11 @@ export function ProductCard({
             <ul className="text-sm">
               {inactiveVariants.map((v) => (
                 <li key={v.id} className="flex items-center justify-between border-b py-1 text-gray-400">
-                  <span>{v.label} — Rp{v.price.toLocaleString("id-ID")}</span>
+                  <span>
+                    {v.label} — Rp{v.price.toLocaleString("id-ID")}
+                    <span> · Urutan {v.sortOrder}</span>
+                    {showStock && <span> · Stok {v.stock ?? 0}</span>}
+                  </span>
                   <ReactivateVariantForm variantId={v.id} />
                 </li>
               ))}
