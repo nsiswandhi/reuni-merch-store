@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { confirmPayment, rejectProof, cancelOrder } from "../actions";
-import { canCancelOrder } from "@/lib/order-status";
+import { canCancelOrder, canUploadProof } from "@/lib/order-status";
 import { PaymentProofDialog } from "./payment-proof-dialog";
 import { EditOrderForm } from "./edit-order-form";
+import { AdminUploadProofForm } from "./admin-upload-proof-form";
+import { ReactivateExpiredForm } from "./reactivate-expired-form";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
@@ -48,6 +50,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <button type="submit" className="text-sm text-red-600 underline">Batalkan Order</button>
           </form>
         )}
+        {order.status === "EXPIRED" && <ReactivateExpiredForm orderId={order.id} />}
       </div>
 
       {order.paymentProofUrl && (
@@ -56,6 +59,8 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           <PaymentProofDialog url={order.paymentProofUrl} />
         </div>
       )}
+
+      {canUploadProof(order.status) && <AdminUploadProofForm orderId={order.id} />}
 
       {order.status === "AWAITING_CONFIRMATION" && (
         <div className="mb-6 flex gap-2">
